@@ -3,7 +3,13 @@ import { useGoogleAuth } from '@/utils/googleAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import {
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+} from 'react-native';
 import { Button, Divider, Text, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { G, Path } from 'react-native-svg';
@@ -49,8 +55,8 @@ export default function LoginScreen() {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with actual API call
-      setError('Chưa kết nối backend. Vui lòng liên hệ admin.');
+      // Fake đăng nhập thành công
+      router.replace('/home');
     } catch (e) {
       setError('Đăng nhập thất bại');
     } finally {
@@ -63,108 +69,141 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1, backgroundColor: '#F5F3FF' }}
     >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', paddingHorizontal: 0 }}>
-          <View style={{ alignItems: 'center', marginBottom: 16 }}>
-            <Text variant="headlineSmall">Chào mừng trở lại!</Text>
-            <Text variant="bodyMedium" style={{ color: '#6b7280' }}>
-              Đăng nhập để tiếp tục
-            </Text>
-          </View>
-
-          <View
-            style={{
-              backgroundColor: 'white',
-              borderRadius: 0,
-              borderTopLeftRadius: 32,
-              borderTopRightRadius: 32,
-              borderColor: '#E9D5FF',
-              paddingHorizontal: 16,
-              paddingTop: 24,
-              paddingBottom: Math.max(insets.bottom, 12) + 12,
-              width: '100%',
-              alignSelf: 'stretch',
-              minHeight: 400,
-            }}
-          >
-            {!!error && (
-              <View style={{ backgroundColor: '#fef2f2', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                <Text variant="bodySmall" style={{ color: '#dc2626', textAlign: 'center' }}>
-                  {error}
-                </Text>
-              </View>
-            )}
-
-            <View style={{ marginBottom: 16 }}>
-              <Text variant="labelLarge" style={{ marginBottom: 8 }}>
-                Email
-              </Text>
-              <TextInput
-                mode="outlined"
-                placeholder="Nhập email của bạn"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
-
-            <View style={{ marginBottom: 20 }}>
-              <Text variant="labelLarge" style={{ marginBottom: 8 }}>
-                Mật khẩu
-              </Text>
-              <TextInput
-                mode="outlined"
-                placeholder="Nhập mật khẩu"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-                right={
-                  <TextInput.Icon
-                    icon={() => (
-                      <Ionicons
-                        name={showPassword ? 'eye' : 'eye-off'}
-                        size={20}
-                        color="#666"
-                      />
-                    )}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
-              />
-            </View>
-
-            <Button mode="contained" onPress={onSubmit} disabled={loading}>
-              {loading ? 'Đang xử lý...' : 'Đăng nhập'}
-            </Button>
-
-            <View style={{ alignItems: 'center', marginVertical: 16 }}>
-              <Divider style={{ alignSelf: 'stretch' }} />
-              <Text style={{ color: '#6b7280', marginVertical: 8 }}>hoặc</Text>
-              <Divider style={{ alignSelf: 'stretch' }} />
-            </View>
-
-            <Button 
-              mode="outlined" 
-              onPress={() => promptAsync()} 
-              style={{ marginBottom: 16 }}
-              icon={() => <GoogleLogo />}
+      <ImageBackground
+        source={{
+          uri: 'https://i.pinimg.com/1200x/d5/49/9f/d5499f6b50aacb71e313815d279b73cc.jpg',
+        }}
+        style={{ flex: 1, width: '100%', height: '100%' }}
+        resizeMode="cover"
+        imageStyle={{ opacity: 0.25 }}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <View
+              style={{
+                alignItems: 'center',
+                marginBottom: 16,
+                marginTop: 48,
+              }}
             >
-              Đăng nhập với Google
-            </Button>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={{ color: '#6b7280' }}>
-                Chưa có tài khoản?{' '}
+              <Text variant="headlineSmall">Chào mừng trở lại!</Text>
+              <Text variant="bodyMedium" style={{ color: '#6b7280' }}>
+                Đăng nhập để tiếp tục
               </Text>
-              <Link href="/auth/register">
-                <Text style={{ color: '#3b82f6', fontWeight: '600' }}>Đăng ký ngay</Text>
-              </Link>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: 'white',
+                borderRadius: 0,
+                borderTopLeftRadius: 32,
+                borderTopRightRadius: 32,
+                borderColor: '#E9D5FF',
+                paddingHorizontal: 16,
+                paddingTop: 24,
+                paddingBottom: Math.max(insets.bottom, 12) + 12,
+                width: '100%',
+                alignSelf: 'stretch',
+                minHeight: 400,
+              }}
+            >
+              {!!error && (
+                <View
+                  style={{
+                    backgroundColor: '#fef2f2',
+                    padding: 12,
+                    borderRadius: 8,
+                    marginBottom: 12,
+                  }}
+                >
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: '#dc2626', textAlign: 'center' }}
+                  >
+                    {error}
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ marginBottom: 16 }}>
+                <Text variant="labelLarge" style={{ marginBottom: 8 }}>
+                  Email
+                </Text>
+                <TextInput
+                  mode="outlined"
+                  placeholder="Nhập email của bạn"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={setEmail}
+                />
+              </View>
+
+              <View style={{ marginBottom: 20 }}>
+                <Text variant="labelLarge" style={{ marginBottom: 8 }}>
+                  Mật khẩu
+                </Text>
+                <TextInput
+                  mode="outlined"
+                  placeholder="Nhập mật khẩu"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  right={
+                    <TextInput.Icon
+                      icon={() => (
+                        <Ionicons
+                          name={showPassword ? 'eye' : 'eye-off'}
+                          size={20}
+                          color="#666"
+                        />
+                      )}
+                      onPress={() => setShowPassword(!showPassword)}
+                    />
+                  }
+                />
+              </View>
+
+              <Button mode="contained" onPress={onSubmit} disabled={loading}>
+                {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+              </Button>
+
+              <View style={{ alignItems: 'center', marginVertical: 16 }}>
+                <Divider style={{ alignSelf: 'stretch' }} />
+                <Text style={{ color: '#6b7280', marginVertical: 8 }}>
+                  hoặc
+                </Text>
+                <Divider style={{ alignSelf: 'stretch' }} />
+              </View>
+
+              <Button
+                mode="outlined"
+                onPress={() => promptAsync()}
+                style={{ marginBottom: 16 }}
+                icon={() => <GoogleLogo />}
+              >
+                Đăng nhập với Google
+              </Button>
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ color: '#6b7280' }}>Chưa có tài khoản? </Text>
+                <Link href="/auth/register">
+                  <Text style={{ color: '#3b82f6', fontWeight: '600' }}>
+                    Đăng ký ngay
+                  </Text>
+                </Link>
+              </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </ImageBackground>
     </KeyboardAvoidingView>
   );
 }
-
