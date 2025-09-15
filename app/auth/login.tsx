@@ -70,9 +70,7 @@ export default function LoginScreen() {
       style={{ flex: 1, backgroundColor: '#F5F3FF' }}
     >
       <ImageBackground
-        source={{
-          uri: 'https://i.pinimg.com/1200x/d5/49/9f/d5499f6b50aacb71e313815d279b73cc.jpg',
-        }}
+        source={require('@/assets/images/bg-login.jpg')}
         style={{ flex: 1, width: '100%', height: '100%' }}
         resizeMode="cover"
         imageStyle={{ opacity: 0.25 }}
