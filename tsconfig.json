@@ -4,9 +4,23 @@
     "strict": true,
     "jsx": "react-jsx",
     "paths": {
-      "@/*": ["./*"]
+      "@@/*": [
+        "./*"
+      ],
+      "@/*": [
+        "./app/*"
+      ]
     },
-    "types": []
+    "types": [
+      "react-native",
+      "react",
+      "node"
+    ]
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }

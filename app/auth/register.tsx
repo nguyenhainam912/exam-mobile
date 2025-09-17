@@ -1,19 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
-import {
-  ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  View,
-} from 'react-native';
-import { Button, Text, TextInput } from 'react-native-paper';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { ReactNode, useState } from 'react';
+import { View } from 'react-native';
+import { Button, TextInput } from 'react-native-paper';
+
+// Import các component đã tách
+import { AuthContainer } from '@@/components/auth/AuthContainer';
+import { AuthFooter } from '@@/components/auth/AuthFooter';
+import { AuthHeader } from '@@/components/auth/AuthHeader';
+import { FormInput } from '@@/components/auth/FormInput';
+import { ErrorMessage } from '@@/components/common/ErrorMessage';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  // const login = useAuthStore((s) => s.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -21,7 +20,6 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const insets = useSafeAreaInsets();
 
   const onSubmit = async () => {
     setLoading(true);
@@ -52,165 +50,107 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
+    <AuthContainer
+      backgroundImage={{
+        uri: 'https://i.pinimg.com/1200x/d5/49/9f/d5499f6b50aacb71e313815d279b73cc.jpg',
+      }}
     >
-      <ImageBackground
-        source={{
-          uri: 'https://i.pinimg.com/1200x/d5/49/9f/d5499f6b50aacb71e313815d279b73cc.jpg',
-        }}
-        style={{ flex: 1, width: '100%', height: '100%' }}
-        resizeMode="cover"
-        imageStyle={{ opacity: 0.25 }}
-      >
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-          <View
-            style={{
-              flex: 1,
-              justifyContent: 'flex-end',
-              paddingHorizontal: 0,
-            }}
-          >
-            <View style={{ alignItems: 'center', marginBottom: 16 }}>
-              <Text
-                variant="displaySmall"
-                style={{ color: '#8B5CF6', fontWeight: 'bold' }}
-              >
-                Đăng ký
-              </Text>
-              <Text variant="bodyMedium" style={{ color: '#6b7280' }}>
-                Tạo tài khoản mới để bắt đầu
-              </Text>
-            </View>
+      <AuthHeader title="Đăng ký" subtitle="Tạo tài khoản mới để bắt đầu" />
 
-            <View
-              style={{
-                backgroundColor: 'white',
-                borderRadius: 0,
-                borderTopLeftRadius: 32,
-                borderTopRightRadius: 32,
-                borderColor: '#E9D5FF',
-                paddingHorizontal: 16,
-                paddingTop: 24,
-                paddingBottom: Math.max(insets.bottom, 12) + 12,
-                width: '100%',
-                alignSelf: 'stretch',
-                minHeight: 500,
-              }}
-            >
-              {!!error && (
-                <View
-                  style={{
-                    backgroundColor: '#fef2f2',
-                    padding: 12,
-                    borderRadius: 8,
-                    marginBottom: 12,
-                  }}
-                >
-                  <Text
-                    variant="bodySmall"
-                    style={{ color: '#dc2626', textAlign: 'center' }}
-                  >
-                    {error}
-                  </Text>
-                </View>
+      <FormContainer>
+        {!!error && <ErrorMessage message={error} />}
+
+        <FormInput
+          label="Email"
+          placeholder="Nhập email của bạn"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+
+        <FormInput
+          label="Mật khẩu"
+          placeholder="Nhập mật khẩu"
+          secureTextEntry={!showPassword}
+          value={password}
+          onChangeText={setPassword}
+          rightIcon={
+            <TextInput.Icon
+              icon={() => (
+                <Ionicons
+                  name={showPassword ? 'eye' : 'eye-off'}
+                  size={20}
+                  color="#666"
+                />
               )}
+              onPress={() => setShowPassword(!showPassword)}
+            />
+          }
+        />
 
-              <View style={{ marginBottom: 16 }}>
-                <Text variant="labelLarge" style={{ marginBottom: 8 }}>
-                  Email
-                </Text>
-                <TextInput
-                  mode="outlined"
-                  placeholder="Nhập email của bạn"
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  value={email}
-                  onChangeText={setEmail}
+        <FormInput
+          label="Nhập lại mật khẩu"
+          placeholder="Nhập lại mật khẩu"
+          secureTextEntry={!showConfirmPassword}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          rightIcon={
+            <TextInput.Icon
+              icon={() => (
+                <Ionicons
+                  name={showConfirmPassword ? 'eye' : 'eye-off'}
+                  size={20}
+                  color="#666"
                 />
-              </View>
+              )}
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            />
+          }
+        />
 
-              <View style={{ marginBottom: 16 }}>
-                <Text variant="labelLarge" style={{ marginBottom: 8 }}>
-                  Mật khẩu
-                </Text>
-                <TextInput
-                  mode="outlined"
-                  placeholder="Nhập mật khẩu"
-                  secureTextEntry={!showPassword}
-                  value={password}
-                  onChangeText={setPassword}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <Ionicons
-                          name={showPassword ? 'eye' : 'eye-off'}
-                          size={20}
-                          color="#666"
-                        />
-                      )}
-                      onPress={() => setShowPassword(!showPassword)}
-                    />
-                  }
-                />
-              </View>
+        <Button
+          mode="contained"
+          onPress={onSubmit}
+          disabled={loading}
+          style={{ marginBottom: 16 }}
+        >
+          {loading ? 'Đang xử lý...' : 'Đăng ký'}
+        </Button>
 
-              <View style={{ marginBottom: 20 }}>
-                <Text variant="labelLarge" style={{ marginBottom: 8 }}>
-                  Nhập lại mật khẩu
-                </Text>
-                <TextInput
-                  mode="outlined"
-                  placeholder="Nhập lại mật khẩu"
-                  secureTextEntry={!showConfirmPassword}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  right={
-                    <TextInput.Icon
-                      icon={() => (
-                        <Ionicons
-                          name={showConfirmPassword ? 'eye' : 'eye-off'}
-                          size={20}
-                          color="#666"
-                        />
-                      )}
-                      onPress={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                    />
-                  }
-                />
-              </View>
+        <AuthFooter
+          message="Đã có tài khoản?"
+          linkText="Đăng nhập ngay"
+          linkHref="/auth/login"
+        />
+      </FormContainer>
+    </AuthContainer>
+  );
+}
 
-              <Button
-                mode="contained"
-                onPress={onSubmit}
-                disabled={loading}
-                style={{ marginBottom: 16 }}
-              >
-                {loading ? 'Đang xử lý...' : 'Đăng ký'}
-              </Button>
+// Tái sử dụng FormContainer từ màn Login (có thể tách ra thành component riêng)
+interface FormContainerProps {
+  children: ReactNode;
+}
 
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                <Text style={{ color: '#6b7280' }}>Đã có tài khoản? </Text>
-                <Link href="/auth/login">
-                  <Text style={{ color: '#3b82f6', fontWeight: '600' }}>
-                    Đăng nhập ngay
-                  </Text>
-                </Link>
-              </View>
-            </View>
-          </View>
-        </ScrollView>
-      </ImageBackground>
-    </KeyboardAvoidingView>
+function FormContainer({ children }: FormContainerProps) {
+  return (
+    <View
+      style={{
+        backgroundColor: 'white',
+        borderRadius: 0,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        borderColor: '#E9D5FF',
+        paddingHorizontal: 16,
+        paddingTop: 24,
+        paddingBottom: 24,
+        width: '100%',
+        alignSelf: 'stretch',
+        minHeight: 500,
+      }}
+    >
+      {children}
+    </View>
   );
 }
