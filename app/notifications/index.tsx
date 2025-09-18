@@ -3,13 +3,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CustomHeader } from '../components/Header/CustomHeader';
-import NotificationItem from '../components/Notifications/NotificationItem';
+import { CustomHeader } from '../../components/Header/CustomHeader';
+import NotificationItem from '../../components/Notifications/NotificationItem';
 import {
   getNotification,
   putNotification,
-} from '../services/Notification/Notification';
-import { useAppStore } from '../stores/appStore';
+} from '../../services/Notification/Notification';
+import { useAppStore } from '../../stores/appStore';
 
 interface Notification {
   _id: string;
@@ -128,7 +128,8 @@ export default function NotificationsScreen() {
       <CustomHeader
         showLogo={false}
         showNotification={false}
-        backgroundImage={require('../assets/images/bg-home.jpg')}
+        title="Thông báo"
+        backgroundImage={require('../../assets/images/bg-home.jpg')}
         imageOpacity={0.7}
         titleColor="#ffffff"
       />
