@@ -1,53 +1,76 @@
 import { StyleSheet, View } from 'react-native';
-import { Avatar, Text } from 'react-native-paper';
+import { Avatar, Card, Text } from 'react-native-paper';
 
 interface UserCardProps {
   name: string;
   className: string;
-  avatarColor?: string;
+  avatar?: string; // Thêm prop avatar
 }
 
-export function UserCard({
-  name,
-  className,
-  avatarColor = '#8B5CF6',
-}: UserCardProps) {
+export function UserCard({ name, className, avatar }: UserCardProps) {
+  // Lấy chữ cái đầu của tên để hiển thị trong Avatar khi không có ảnh
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
-    <View style={styles.container}>
-      <Avatar.Icon
-        size={48}
-        icon="account"
-        color="#fff"
-        style={{ backgroundColor: avatarColor, marginRight: 16 }}
-      />
-      <View>
-        <Text style={styles.userName}>{name}</Text>
-        <Text style={styles.className}>Lớp: {className}</Text>
-      </View>
-    </View>
+    <Card style={styles.card}>
+      <Card.Content style={styles.content}>
+        {avatar ? (
+          <Avatar.Image
+            size={60}
+            source={{ uri: avatar }}
+            style={styles.avatar}
+          />
+        ) : (
+          <Avatar.Text
+            size={60}
+            label={getInitials(name)}
+            color="#fff"
+            style={{ backgroundColor: '#8B5CF6' }}
+          />
+        )}
+        <View style={styles.textContainer}>
+          <Text variant="headlineSmall" style={styles.name}>
+            {name}
+          </Text>
+          <Text variant="bodyMedium" style={styles.class}>
+            {className}
+          </Text>
+        </View>
+      </Card.Content>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+  card: {
+    marginVertical: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+  },
+  content: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 8,
   },
-  userName: {
+  avatar: {
+    marginRight: 16,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  name: {
     fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 8,
+    color: '#1F2937',
   },
-  className: {
-    color: '#6b7280',
+  class: {
+    color: '#4B5563',
+    marginTop: 4,
   },
 });

@@ -11,7 +11,8 @@ import { View } from 'react-native';
 import { Button, Divider, Text, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Import thêm các module cần thiết
-import { login } from '@@/services/admin/admin';
+import { getInfoAdmin, login } from '@@/services/admin/admin';
+import { useAppStore } from '@@/stores/appStore';
 import axiosInstance from '@@/utils/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -22,6 +23,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { currentUser, setCurrentUser } = useAppStore();
 
   const onSubmit = async () => {
     // Validate inputs
@@ -55,11 +57,9 @@ export default function LoginScreen() {
             'Authorization'
           ] = `Bearer ${response.data.accessToken}`;
 
-          // TODO: Lấy thông tin người dùng nếu cần
-          // const userInfo = await getInfoAdmin();
-          // Lưu thông tin user nếu cần
+          const userInfo = await getInfoAdmin();
+          setCurrentUser(userInfo?.data || null);
 
-          // Chuyển hướng đến trang home sau khi đăng nhập thành công
           router.replace('/home');
         }
       } else {

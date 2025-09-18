@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native'; // Thêm import này
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BottomNavigation } from 'react-native-paper';
+import { useAppStore } from '../../stores/appStore';
 
 // Import các component đã tách
 import { CustomHeader } from '../../components/Header/CustomHeader';
@@ -16,33 +19,11 @@ interface Route {
   unfocusedIcon: string;
 }
 
-// Component cho Header của Home
-function HomeHeader() {
-  return (
-    <CustomHeader
-      showLogo={true}
-      showNotification={true}
-      notificationCount={3}
-      onNotificationPress={() => console.log('Notification pressed')}
-    />
-  );
-}
-
-// Component cho Header của Profile
-function ProfileHeader() {
-  return (
-    <CustomHeader
-      showLogo={false}
-      title="Hồ sơ cá nhân"
-      backgroundImage={require('../../assets/images/bg-home.jpg')}
-      imageOpacity={0.7}
-      titleColor="#ffffff"
-      showNotification={false}
-    />
-  );
-}
-
 export default function HomeScreen() {
+  const router = useRouter();
+  const { currentUser } = useAppStore();
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const [index, setIndex] = useState(0);
   const [routes] = useState<Route[]>([
     {
@@ -60,6 +41,71 @@ export default function HomeScreen() {
       unfocusedIcon: 'account-outline',
     },
   ]);
+
+  // Hàm lấy số lượng thông báo chưa đọc
+  const fetchUnreadCount = async () => {
+    try {
+      // Đây là một ví dụ, thay thế bằng API thực tế của bạn
+      // const count = await getUnreadNotificationCount(currentUser._id);
+      // setUnreadCount(count);
+
+      // Tạm thời sử dụng số lượng cố định cho ví dụ
+      setUnreadCount(3);
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+    }
+  };
+
+  // Sử dụng useFocusEffect để cập nhật khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      if (currentUser?._id) {
+        fetchUnreadCount();
+      }
+
+      // Trả về hàm cleanup nếu cần
+      return () => {
+        // Cleanup code nếu cần
+      };
+    }, [currentUser]),
+  );
+
+  // Vẫn giữ useEffect để khởi tạo lần đầu
+  useEffect(() => {
+    if (currentUser?._id) {
+      fetchUnreadCount();
+    }
+  }, [currentUser]);
+
+  // Xử lý khi người dùng nhấn vào icon thông báo
+  const handleNotificationPress = () => {
+    router.push('/notifications');
+  };
+
+  // Component cho Header của Home với xử lý thông báo
+  const HomeHeader = () => {
+    return (
+      <CustomHeader
+        showLogo={true}
+        showNotification={true}
+        notificationCount={unreadCount}
+        onNotificationPress={handleNotificationPress}
+      />
+    );
+  };
+
+  // Component cho Header của Profile
+  const ProfileHeader = () => {
+    return (
+      <CustomHeader
+        showLogo={false}
+        backgroundImage={require('../../assets/images/bg-home.jpg')}
+        imageOpacity={0.7}
+        titleColor="#ffffff"
+        showNotification={false}
+      />
+    );
+  };
 
   // Render header dựa trên tab hiện tại
   const renderHeader = () => {

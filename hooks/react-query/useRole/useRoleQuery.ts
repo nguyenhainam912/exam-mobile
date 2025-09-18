@@ -1,6 +1,6 @@
-import useRoleStore from '@/stores/role';
-import { GetParams } from '@/utils/interfaces';
 import { getRoleById, getRoles } from '@@/services/role/role';
+import useRoleStore from '@@/stores/role';
+import { GetParams } from '@@/utils/interfaces';
 import { useQuery } from '@tanstack/react-query';
 
 export const useRoleQuery = (params: GetParams) => {

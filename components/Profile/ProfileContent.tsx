@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useAppStore } from '@@/stores/appStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   Avatar,
@@ -8,37 +11,181 @@ import {
   List,
   Text,
 } from 'react-native-paper';
+import { UserFormData } from './Dialogs/DialogEditProfile';
+import { ProfileDialogs } from './ProfileDialogs';
 
 export function ProfileContent() {
-  const [userInfo] = useState({
-    name: 'Nguyễn Văn A',
-    email: 'nguyenvana@example.com',
-    phone: '0901234567',
-    role: 'Giáo viên',
-    joinDate: '01/09/2023',
+  const router = useRouter();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
+  const [showSupportDialog, setShowSupportDialog] = useState(false);
+  const [showTermsDialog, setShowTermsDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  // Lấy currentUser từ store
+  const { currentUser, setCurrentUser } = useAppStore();
+
+  // State mặc định cho userInfo
+  const [userInfo, setUserInfo] = useState({
+    name: 'Đang tải...',
+    email: 'Đang tải...',
+    phone: 'Đang tải...',
+    joinDate: 'Đang tải...',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: '',
+    },
   });
+
+  // Cập nhật userInfo khi currentUser thay đổi
+  useEffect(() => {
+    if (currentUser) {
+      setUserInfo({
+        name: currentUser.fullName || 'Chưa cập nhật',
+        email: currentUser.email || 'Chưa cập nhật',
+        phone: currentUser.phoneNumber || 'Chưa cập nhật',
+        joinDate: formatDate(currentUser.createdAt || new Date().toISOString()),
+        address: currentUser.address || {
+          street: '',
+          city: '',
+          state: '',
+          country: '',
+          zipCode: '',
+        },
+      });
+    }
+  }, [currentUser]);
+
+  // Hàm format ngày tháng
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  // Hàm format địa chỉ
+  const formatAddress = () => {
+    if (!userInfo.address) return 'Chưa cập nhật';
+
+    const parts = [];
+    if (userInfo.address.street) parts.push(userInfo.address.street);
+    if (userInfo.address.city) parts.push(userInfo.address.city);
+    if (userInfo.address.country) parts.push(userInfo.address.country);
+
+    return parts.length > 0 ? parts.join(', ') : 'Chưa cập nhật';
+  };
+
+  const handleLogout = async () => {
+    setShowLogoutDialog(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.multiRemove(['user_info', 'settings']);
+
+      // Reset currentUser trong store
+      setCurrentUser(null);
+
+      setShowLogoutDialog(false);
+      router.replace('/auth/login');
+    } catch (error) {
+      console.error('Lỗi khi đăng xuất:', error);
+      setShowLogoutDialog(false);
+    }
+  };
+
+  // Hàm lưu thông tin người dùng
+  const handleSaveUserData = async (data: UserFormData) => {
+    try {
+      // Trong thực tế, đây là nơi gọi API để cập nhật thông tin người dùng
+      console.log('Saving user data:', data);
+
+      // Cập nhật dữ liệu trong store
+      if (currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          fullName: data.fullName,
+          email: data.email,
+          phoneNumber: data.phoneNumber,
+          avatar: data.avatar,
+          address: data.address,
+        };
+
+        setCurrentUser(updatedUser);
+
+        // Lưu thông tin cập nhật vào AsyncStorage
+        await AsyncStorage.setItem('user_info', JSON.stringify(updatedUser));
+
+        // Thông báo cập nhật thành công (trong thực tế bạn có thể dùng Toast hoặc Alert)
+        console.log('Cập nhật thành công');
+      }
+    } catch (error) {
+      console.error('Lỗi khi cập nhật:', error);
+    }
+  };
+
+  // Lấy chữ cái đầu của tên để hiển thị trong Avatar khi không có ảnh
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <View style={styles.container}>
+      {/* Tất cả Dialog đã được tách */}
+      <ProfileDialogs
+        showLogoutDialog={showLogoutDialog}
+        showHelpDialog={showHelpDialog}
+        showSupportDialog={showSupportDialog}
+        showTermsDialog={showTermsDialog}
+        showEditDialog={showEditDialog}
+        setShowLogoutDialog={setShowLogoutDialog}
+        setShowHelpDialog={setShowHelpDialog}
+        setShowSupportDialog={setShowSupportDialog}
+        setShowTermsDialog={setShowTermsDialog}
+        setShowEditDialog={setShowEditDialog}
+        confirmLogout={confirmLogout}
+        userData={currentUser}
+        onSaveUserData={handleSaveUserData}
+      />
+
       {/* Phần header cố định */}
       <View style={styles.fixedHeader}>
         {/* Phần thông tin cá nhân */}
         <View style={styles.profileHeader}>
-          <Avatar.Image
-            size={80}
-            source={{ uri: 'https://i.pravatar.cc/300' }}
-            style={styles.avatar}
-          />
+          {currentUser?.avatar ? (
+            <Avatar.Image
+              size={48}
+              source={{ uri: currentUser.avatar }}
+              style={{ marginRight: 16 }}
+            />
+          ) : (
+            <Avatar.Text
+              size={48}
+              label={getInitials(userInfo.name)}
+              color="#fff"
+              style={{ backgroundColor: '#8B5CF6', marginRight: 16 }}
+            />
+          )}
           <View style={styles.profileInfo}>
             <Text variant="titleLarge" style={styles.name}>
               {userInfo.name}
             </Text>
-            <Text style={styles.role}>{userInfo.role}</Text>
-            <View style={styles.badgeContainer}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>Tài khoản đã xác thực</Text>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -47,7 +194,7 @@ export function ProfileContent() {
           mode="outlined"
           style={styles.editButton}
           icon="account-edit"
-          onPress={() => console.log('Edit profile')}
+          onPress={() => setShowEditDialog(true)}
         >
           Chỉnh sửa hồ sơ
         </Button>
@@ -73,47 +220,15 @@ export function ProfileContent() {
             />
             <Divider style={styles.divider} />
             <InfoRow
+              icon="map-marker"
+              label="Địa chỉ"
+              value={formatAddress()}
+            />
+            <Divider style={styles.divider} />
+            <InfoRow
               icon="calendar"
               label="Ngày tham gia"
               value={userInfo.joinDate}
-            />
-          </View>
-        </View>
-
-        {/* Cài đặt */}
-        <View style={styles.section}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
-            Cài đặt
-          </Text>
-          <View style={styles.settingsCard}>
-            <List.Item
-              title="Thông báo"
-              description="Quản lý thông báo ứng dụng"
-              left={(props) => (
-                <List.Icon {...props} icon="bell-outline" color="#8B5CF6" />
-              )}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => console.log('Notifications')}
-            />
-            <Divider />
-            <List.Item
-              title="Ngôn ngữ"
-              description="Tiếng Việt"
-              left={(props) => (
-                <List.Icon {...props} icon="translate" color="#8B5CF6" />
-              )}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => console.log('Language')}
-            />
-            <Divider />
-            <List.Item
-              title="Giao diện"
-              description="Sáng"
-              left={(props) => (
-                <List.Icon {...props} icon="theme-light-dark" color="#8B5CF6" />
-              )}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => console.log('Theme')}
             />
           </View>
         </View>
@@ -134,7 +249,7 @@ export function ProfileContent() {
                 />
               )}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => console.log('Help center')}
+              onPress={() => setShowHelpDialog(true)}
             />
             <Divider />
             <List.Item
@@ -143,7 +258,7 @@ export function ProfileContent() {
                 <List.Icon {...props} icon="headset" color="#8B5CF6" />
               )}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => console.log('Contact support')}
+              onPress={() => setShowSupportDialog(true)}
             />
             <Divider />
             <List.Item
@@ -156,7 +271,7 @@ export function ProfileContent() {
                 />
               )}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => console.log('Terms')}
+              onPress={() => setShowTermsDialog(true)}
             />
           </View>
         </View>
@@ -167,7 +282,7 @@ export function ProfileContent() {
           style={styles.logoutButton}
           buttonColor="#f87171"
           icon="logout"
-          onPress={() => console.log('Logout')}
+          onPress={handleLogout}
         >
           Đăng xuất
         </Button>
@@ -351,5 +466,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#9CA3AF',
     marginBottom: 32,
+  },
+  contactIcon: {
+    margin: 0,
+    marginRight: 8,
+    backgroundColor: '#F3E8FF',
+    height: 36,
+    width: 36,
   },
 });

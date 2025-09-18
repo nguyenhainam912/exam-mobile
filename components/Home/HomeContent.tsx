@@ -1,3 +1,4 @@
+import { useAppStore } from '@@/stores/appStore';
 import { StyleSheet, View } from 'react-native';
 import { FeatureGrid } from './FeatureGrid';
 import { UserCard } from './UserCard';
@@ -31,9 +32,22 @@ const features = [
 ];
 
 export function HomeContent() {
+  // Lấy currentUser từ store
+  const { currentUser } = useAppStore();
+
+  // Tên và lớp mặc định trong trường hợp không có dữ liệu
+  const userName = currentUser?.fullName || 'Chưa cập nhật';
+
+  // Giả sử có trường className trong currentUser, nếu không thì dùng default
+  const userClass = currentUser?.className || 'Chưa cập nhật';
+
   return (
     <View style={styles.container}>
-      <UserCard name="Nguyễn Hải Nam" className="Lớp 3" />
+      <UserCard
+        name={userName}
+        className={userClass}
+        avatar={currentUser?.avatar}
+      />
       <FeatureGrid features={features} />
       <View style={styles.spacer} />
     </View>

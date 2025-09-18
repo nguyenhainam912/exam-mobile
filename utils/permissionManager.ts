@@ -1,4 +1,4 @@
-import { ALL_PERMISSIONS } from '@/config/permissions';
+import { ALL_PERMISSIONS } from '@@/config/permissions';
 
 export interface Permission {
   method: string;
@@ -26,15 +26,17 @@ class PermissionManager {
       return false;
     }
 
-    return this.userPermissions.some((userPerm) =>
-      userPerm.apiPath === permission.apiPath &&
-      userPerm.method === permission.method &&
-      userPerm.module === permission.module
+    return this.userPermissions.some(
+      (userPerm) =>
+        userPerm.apiPath === permission.apiPath &&
+        userPerm.method === permission.method &&
+        userPerm.module === permission.module,
     );
   }
 
   hasModulePermission(module: string, action: string): boolean {
-    const permissionKey = ALL_PERMISSIONS[module as keyof typeof ALL_PERMISSIONS];
+    const permissionKey =
+      ALL_PERMISSIONS[module as keyof typeof ALL_PERMISSIONS];
     if (!permissionKey) return false;
 
     const permission = permissionKey[action as keyof typeof permissionKey];
@@ -48,4 +50,4 @@ class PermissionManager {
   }
 }
 
-export const permissionManager = new PermissionManager(); 
+export const permissionManager = new PermissionManager();
