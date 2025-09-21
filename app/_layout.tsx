@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Dimensions, Platform, StyleSheet, View, StatusBar as RNStatusBar } from 'react-native';
+import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 import { MD3LightTheme, Provider as PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
