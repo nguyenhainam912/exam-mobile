@@ -9,8 +9,12 @@ const defineConfig = (): ExpoConfig => ({
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
-  ios: { supportsTablet: true },
+  ios: {
+    bundleIdentifier: 'com.anonymous.exammobile',
+    supportsTablet: true,
+  },
   android: {
+    package: 'com.anonymous.exammobile',
     edgeToEdgeEnabled: true,
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
@@ -33,6 +37,7 @@ const defineConfig = (): ExpoConfig => ({
         backgroundColor: '#ffffff',
       },
     ],
+    '@react-native-google-signin/google-signin',
   ],
   experiments: { typedRoutes: true },
 });

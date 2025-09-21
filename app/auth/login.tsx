@@ -11,9 +11,10 @@ import { View } from 'react-native';
 import { Button, Divider, Text, TextInput } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Import thêm các module cần thiết
-import { getInfoAdmin, login } from '@@/services/admin/admin';
+import { getInfoAdmin, googleLogin, login } from '@@/services/admin/admin';
 import { useAppStore } from '@@/stores/appStore';
 import axiosInstance from '@@/utils/axiosInstance';
+import { signInWithGoogle } from '@@/utils/googleSignIn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
@@ -22,8 +23,9 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { currentUser, setCurrentUser } = useAppStore();
+  const { setCurrentUser } = useAppStore();
 
   const onSubmit = async () => {
     // Validate inputs
@@ -80,6 +82,70 @@ export default function LoginScreen() {
     }
   };
 
+  // Xử lý đăng nhập Google
+  const handleGoogleSignIn = async () => {
+    try {
+      setGoogleLoading(true);
+      setError(null);
+
+      const result = await signInWithGoogle();
+
+      if (result.success && result.idToken) {
+        await handleGoogleAuthSuccess(result);
+      } else {
+        setError(result.error || 'Đăng nhập với Google thất bại');
+      }
+    } catch (e: any) {
+      console.log('Google Sign-In error:', e);
+      setError(e.message || 'Đăng nhập với Google thất bại. Vui lòng thử lại.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // Handle successful Google authentication
+  const handleGoogleAuthSuccess = async (authData: {
+    idToken?: string;
+    accessToken?: string;
+  }) => {
+    try {
+      setError(null);
+
+      if (!authData || !authData.idToken) {
+        throw new Error('Không thể lấy ID token từ Google');
+      }
+
+      // Call backend API with ID token
+      const response: any = await googleLogin({
+        idToken: authData.idToken,
+      });
+
+      if (response?.statusCode === 201 && response?.data?.accessToken) {
+        // Save the token
+        await AsyncStorage.setItem('token', response.data.accessToken);
+
+        // Set authorization header
+        axiosInstance.defaults.headers.common[
+          'Authorization'
+        ] = `Bearer ${response.data.accessToken}`;
+
+        // Get user info
+        const userInfo = await getInfoAdmin();
+        setCurrentUser(userInfo?.data || null);
+
+        // Navigate to home screen
+        router.replace('/home');
+      } else {
+        setError('Đăng nhập với Google thất bại. Vui lòng thử lại sau.');
+      }
+    } catch (e: any) {
+      console.log('Google Auth processing error:', e);
+      setError(
+        e.message || 'Đăng nhập với Google thất bại. Vui lòng thử lại sau.',
+      );
+    }
+  };
+
   return (
     <AuthContainer backgroundImage={require('@@/assets/images/bg-login.jpg')}>
       <AuthHeader title="Chào mừng trở lại!" subtitle="Đăng nhập để tiếp tục" />
@@ -116,7 +182,11 @@ export default function LoginScreen() {
           }
         />
 
-        <Button mode="contained" onPress={onSubmit} disabled={loading}>
+        <Button
+          mode="contained"
+          onPress={onSubmit}
+          disabled={loading || googleLoading}
+        >
           {loading ? 'Đang xử lý...' : 'Đăng nhập'}
         </Button>
 
@@ -126,8 +196,11 @@ export default function LoginScreen() {
           mode="outlined"
           style={{ marginBottom: 16 }}
           icon={() => <GoogleLogo />}
+          onPress={handleGoogleSignIn}
+          loading={googleLoading}
+          disabled={loading || googleLoading}
         >
-          Đăng nhập với Google
+          {googleLoading ? 'Đang xử lý...' : 'Đăng nhập với Google'}
         </Button>
 
         <AuthFooter

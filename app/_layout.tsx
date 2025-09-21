@@ -1,10 +1,11 @@
+import { configureGoogleSignIn } from '@@/utils/googleSignIn';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Dimensions, Platform, StyleSheet, View } from 'react-native';
+import { Dimensions, Platform, StyleSheet, View, StatusBar as RNStatusBar } from 'react-native';
 import { MD3LightTheme, Provider as PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +33,33 @@ export default function RootLayout() {
 
   // Create a client
   const queryClient = new QueryClient();
+
+  // Cấu hình Google Sign-In khi ứng dụng khởi động (chỉ hoạt động với development/standalone build)
+  useEffect(() => {
+    try {
+      // Kiểm tra xem có phải đang chạy trong Expo Go không
+      const isExpoGo =
+        typeof navigator !== 'undefined' &&
+        navigator.product === 'ReactNative' &&
+        __DEV__;
+
+      if (
+        configureGoogleSignIn &&
+        typeof configureGoogleSignIn === 'function'
+      ) {
+        configureGoogleSignIn();
+      } else {
+        console.warn(
+          'Google Sign-In native module not available. This is expected in Expo Go. Use development build for full functionality.',
+        );
+      }
+    } catch (error: any) {
+      console.warn(
+        'Google Sign-In configuration skipped:',
+        error?.message || 'Native module not available',
+      );
+    }
+  }, []);
 
   // Định nghĩa các routes
   const routes: Route[] = [
@@ -178,7 +206,6 @@ const styles = StyleSheet.create({
   },
   customNavContainer: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -199,6 +226,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     overflow: 'hidden',
+    marginBottom: 20, // Thêm margin bottom để đẩy lên
   },
   tabButton: {
     flex: 1,

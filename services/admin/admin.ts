@@ -17,3 +17,13 @@ export async function login(payload: any, options?: any) {
     throw error;
   }
 }
+
+export async function googleLogin(payload: { idToken: string }, options?: any) {
+  try {
+    // Call your backend API for Google authentication
+    const response = await axiosInstance.post(`/auth/google/mobile`, payload);
+    return response?.data;
+  } catch (error) {
+    throw error;
+  }
+}
