@@ -1,6 +1,10 @@
-import axiosInstance from '@/utils/axiosInstance';
+import axiosInstance from '@@/utils/axiosInstance';
 
-export async function getSubjects(payload: { page: number; limit: number; cond?: any }) {
+export async function getSubjects(payload: {
+  page: number;
+  limit: number;
+  cond?: any;
+}) {
   try {
     const { page, limit, cond } = payload;
     const response = await axiosInstance.get('/subjects', {
@@ -35,4 +39,4 @@ export async function getSubjectById(id: string) {
   } catch (error) {
     throw error;
   }
-} 
+}

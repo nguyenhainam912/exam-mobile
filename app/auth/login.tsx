@@ -59,10 +59,25 @@ export default function LoginScreen() {
             'Authorization'
           ] = `Bearer ${response.data.accessToken}`;
 
-          const userInfo = await getInfoAdmin();
-          setCurrentUser(userInfo?.data || null);
-
-          router.replace('/home');
+          try {
+            const userInfo = await getInfoAdmin();
+            setCurrentUser(userInfo?.data || null);
+            router.replace('/home');
+          } catch (userError: any) {
+            console.log('Get user info error:', userError);
+            if (userError.response?.data?.errorCode === 'ROLE_NOT_MATCHED') {
+              setError(
+                'Tài khoản của bạn không có quyền truy cập ứng dụng này. Vui lòng liên hệ quản trị viên để được hỗ trợ !',
+              );
+            } else if (userError.response?.data?.errorDescription) {
+              setError(userError.response.data.errorDescription);
+            } else {
+              setError('Không thể lấy thông tin người dùng. Vui lòng thử lại.');
+            }
+            // Clear token nếu có lỗi
+            await AsyncStorage.removeItem('token');
+            delete axiosInstance.defaults.headers.common['Authorization'];
+          }
         }
       } else {
         // Xử lý khi statusCode không phải 201
@@ -70,7 +85,17 @@ export default function LoginScreen() {
       }
     } catch (e: any) {
       console.log('Login error:', e);
-      if (e.response?.data?.message) {
+      if (
+        e.response?.data?.errorCode === '401' &&
+        e.response?.data?.errorDescription ===
+          'Invalid credentials or email not verified'
+      ) {
+        setError(
+          'Thông tin đăng nhập không đúng hoặc email chưa được xác thực. Vui lòng kiểm tra lại.',
+        );
+      } else if (e.response?.data?.errorDescription) {
+        setError(e.response.data.errorDescription);
+      } else if (e.response?.data?.message) {
         setError(e.response.data.message);
       } else if (e.message) {
         setError(e.message);
@@ -129,20 +154,42 @@ export default function LoginScreen() {
           'Authorization'
         ] = `Bearer ${response.data.accessToken}`;
 
-        // Get user info
-        const userInfo = await getInfoAdmin();
-        setCurrentUser(userInfo?.data || null);
+        try {
+          // Get user info
+          const userInfo = await getInfoAdmin();
+          setCurrentUser(userInfo?.data || null);
 
-        // Navigate to home screen
-        router.replace('/home');
+          // Navigate to home screen
+          router.replace('/home');
+        } catch (userError: any) {
+          console.log('Get user info error:', userError);
+          if (userError.response?.data?.errorCode === 'ROLE_NOT_MATCHED') {
+            setError(
+              'Tài khoản của bạn không có quyền truy cập ứng dụng này. Vui lòng liên hệ quản trị viên để được hỗ trợ !',
+            );
+          } else if (userError.response?.data?.errorDescription) {
+            setError(userError.response.data.errorDescription);
+          } else {
+            setError('Không thể lấy thông tin người dùng. Vui lòng thử lại.');
+          }
+          // Clear token nếu có lỗi
+          await AsyncStorage.removeItem('token');
+          delete axiosInstance.defaults.headers.common['Authorization'];
+        }
       } else {
         setError('Đăng nhập với Google thất bại. Vui lòng thử lại sau.');
       }
     } catch (e: any) {
       console.log('Google Auth processing error:', e);
-      setError(
-        e.message || 'Đăng nhập với Google thất bại. Vui lòng thử lại sau.',
-      );
+      if (e.response?.data?.errorDescription) {
+        setError(e.response.data.errorDescription);
+      } else if (e.response?.data?.message) {
+        setError(e.response.data.message);
+      } else if (e.message) {
+        setError(e.message);
+      } else {
+        setError('Đăng nhập với Google thất bại. Vui lòng thử lại sau.');
+      }
     }
   };
 

@@ -41,16 +41,16 @@ export function DialogEditProfile({
   onSave,
   userData,
 }: DialogEditProfileProps) {
-  const [fullName, setFullName] = useState(userData.fullName || '');
+  const [fullName, setFullName] = useState(userData?.fullName || '');
   // Email không cần setState vì không cho phép chỉnh sửa
-  const email = userData.email || '';
-  const [phoneNumber, setPhoneNumber] = useState(userData.phoneNumber || '');
-  const [avatar, setAvatar] = useState(userData.avatar || '');
-  const [street, setStreet] = useState(userData.address?.street || '');
-  const [city, setCity] = useState(userData.address?.city || '');
-  const [state, setState] = useState(userData.address?.state || '');
-  const [country, setCountry] = useState(userData.address?.country || '');
-  const [zipCode, setZipCode] = useState(userData.address?.zipCode || '');
+  const email = userData?.email || '';
+  const [phoneNumber, setPhoneNumber] = useState(userData?.phoneNumber || '');
+  const [avatar, setAvatar] = useState(userData?.avatar || '');
+  const [street, setStreet] = useState(userData?.address?.street || '');
+  const [city, setCity] = useState(userData?.address?.city || '');
+  const [state, setState] = useState(userData?.address?.state || '');
+  const [country, setCountry] = useState(userData?.address?.country || '');
+  const [zipCode, setZipCode] = useState(userData?.address?.zipCode || '');
 
   // Validation states
   const [errors, setErrors] = useState({

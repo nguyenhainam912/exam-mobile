@@ -1,3 +1,4 @@
+import { putUser } from '@@/services/user/user';
 import { useAppStore } from '@@/stores/appStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -108,13 +109,9 @@ export function ProfileContent() {
   // Hàm lưu thông tin người dùng
   const handleSaveUserData = async (data: UserFormData) => {
     try {
-      // Trong thực tế, đây là nơi gọi API để cập nhật thông tin người dùng
-      console.log('Saving user data:', data);
-
-      // Cập nhật dữ liệu trong store
-      if (currentUser) {
-        const updatedUser = {
-          ...currentUser,
+      // Gọi API để cập nhật thông tin người dùng trên server
+      if (currentUser?._id) {
+        const payload = {
           fullName: data.fullName,
           email: data.email,
           phoneNumber: data.phoneNumber,
@@ -122,16 +119,44 @@ export function ProfileContent() {
           address: data.address,
         };
 
-        setCurrentUser(updatedUser);
+        // Gọi API putUser để cập nhật dữ liệu
+        const response = await putUser(currentUser.userId, payload);
 
-        // Lưu thông tin cập nhật vào AsyncStorage
-        await AsyncStorage.setItem('user_info', JSON.stringify(updatedUser));
+        if (response?.statusCode === 200 && response?.data) {
+          // Cập nhật dữ liệu trong store với data từ server
+          const updatedUser = {
+            ...currentUser,
+            ...response.data, // Sử dụng dữ liệu từ server response
+          };
 
-        // Thông báo cập nhật thành công (trong thực tế bạn có thể dùng Toast hoặc Alert)
-        console.log('Cập nhật thành công');
+          setCurrentUser(updatedUser);
+
+          // Lưu thông tin cập nhật vào AsyncStorage
+          await AsyncStorage.setItem('user_info', JSON.stringify(updatedUser));
+
+          // Thông báo cập nhật thành công
+          console.log('Cập nhật thành công');
+        } else {
+          throw new Error('Cập nhật thất bại');
+        }
+      } else {
+        throw new Error('Không tìm thấy ID người dùng');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Lỗi khi cập nhật:', error);
+
+      // Xử lý lỗi theo format API mới
+      if (error.response?.data?.errorDescription) {
+        console.error('Error:', error.response.data.errorDescription);
+        // Có thể hiển thị thông báo lỗi cho user ở đây
+      } else if (error.response?.data?.message) {
+        console.error('Error:', error.response.data.message);
+      } else if (error.message) {
+        console.error('Error:', error.message);
+      }
+
+      // Throw error để component có thể handle
+      throw error;
     }
   };
 

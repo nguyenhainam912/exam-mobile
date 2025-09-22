@@ -36,8 +36,9 @@ export function FeatureButton({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 10,
+    width: '22%', // 4 items per row with some margin
+    marginHorizontal: '1.5%',
+    marginBottom: 16,
     minHeight: 90,
   },
   iconContainer: {

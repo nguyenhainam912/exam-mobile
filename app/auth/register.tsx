@@ -1,8 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ReactNode, useState } from 'react';
-import { View } from 'react-native';
-import { Button, TextInput } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
+import {
+  Button,
+  Divider,
+  Portal,
+  Snackbar,
+  Text,
+  TextInput,
+} from 'react-native-paper';
 
 // Import các component đã tách
 import { AuthContainer } from '@@/components/auth/AuthContainer';
@@ -10,6 +17,7 @@ import { AuthFooter } from '@@/components/auth/AuthFooter';
 import { AuthHeader } from '@@/components/auth/AuthHeader';
 import { FormInput } from '@@/components/auth/FormInput';
 import { ErrorMessage } from '@@/components/common/ErrorMessage';
+import { register } from '@@/services/user/user';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -20,6 +28,7 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessSnackbar, setShowSuccessSnackbar] = useState(false);
 
   const onSubmit = async () => {
     setLoading(true);
@@ -40,10 +49,43 @@ export default function RegisterScreen() {
     }
 
     try {
-      // TODO: Replace with actual API call
-      setError('Chưa kết nối backend. Vui lòng liên hệ admin.');
-    } catch (e) {
-      setError('Đăng ký thất bại');
+      const response: any = await register({
+        email,
+        password,
+      });
+
+      if (response?.statusCode === 201 && response?.data) {
+        // Đăng ký thành công, hiển thị thông báo và chuyển về login
+        setError(null);
+
+        // Hiển thị Snackbar thông báo thành công
+        setShowSuccessSnackbar(true);
+
+        // Chuyển về màn hình login sau 2 giây
+        setTimeout(() => {
+          router.replace('/auth/login');
+        }, 2000);
+      } else {
+        setError('Đăng ký thất bại. Vui lòng thử lại sau.');
+      }
+    } catch (e: any) {
+      console.log('Register error:', e);
+      if (
+        e.response?.data?.errorCode === '409' &&
+        e.response?.data?.errorDescription === 'Email already registered'
+      ) {
+        setError(
+          'Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.',
+        );
+      } else if (e.response?.data?.errorDescription) {
+        setError(e.response.data.errorDescription);
+      } else if (e.response?.data?.message) {
+        setError(e.response.data.message);
+      } else if (e.message) {
+        setError(e.message);
+      } else {
+        setError('Đăng ký thất bại. Vui lòng thử lại sau.');
+      }
     } finally {
       setLoading(false);
     }
@@ -124,9 +166,51 @@ export default function RegisterScreen() {
           linkHref="/auth/login"
         />
       </FormContainer>
+
+      <Portal>
+        <View style={styles.snackbarContainer}>
+          <Snackbar
+            visible={showSuccessSnackbar}
+            onDismiss={() => setShowSuccessSnackbar(false)}
+            duration={2000}
+            style={{
+              backgroundColor: '#8B5CF6',
+              borderRadius: 12,
+              borderWidth: 2,
+              borderColor: '#E9D5FF',
+              alignSelf: 'center',
+              maxWidth: '90%',
+            }}
+            action={{
+              label: 'OK',
+              onPress: () => {
+                setShowSuccessSnackbar(false);
+                router.replace('/auth/login');
+              },
+              labelStyle: { color: 'white', fontWeight: '600' },
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: '500' }}>
+              Đăng ký thành công! Vui lòng xác thực qua email để tiếp tục đăng
+              nhập.
+            </Text>
+          </Snackbar>
+        </View>
+      </Portal>
     </AuthContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  snackbarContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+});
 
 // Tái sử dụng FormContainer từ màn Login (có thể tách ra thành component riêng)
 interface FormContainerProps {
@@ -151,6 +235,20 @@ function FormContainer({ children }: FormContainerProps) {
       }}
     >
       {children}
+    </View>
+  );
+}
+
+interface DividerWithTextProps {
+  text: string;
+}
+
+function DividerWithText({ text }: DividerWithTextProps) {
+  return (
+    <View style={{ alignItems: 'center', marginVertical: 16 }}>
+      <Divider style={{ alignSelf: 'stretch' }} />
+      <Text style={{ color: '#6b7280', marginVertical: 8 }}>{text}</Text>
+      <Divider style={{ alignSelf: 'stretch' }} />
     </View>
   );
 }
