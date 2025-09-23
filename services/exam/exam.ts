@@ -1,6 +1,10 @@
-import axiosInstance from '@/utils/axiosInstance';
+import axiosInstance from '@@/utils/axiosInstance';
 
-export async function getExams(payload: { page: number; limit: number; cond?: any }) {
+export async function getExams(payload: {
+  page: number;
+  limit: number;
+  cond?: any;
+}) {
   try {
     const { page, limit, cond } = payload;
     const response = await axiosInstance.get('/exams', {
@@ -38,7 +42,11 @@ export async function getExamById(id: string) {
 }
 
 // Lấy danh sách yêu cầu thay đổi đề thi
-export async function getExamChangeRequests(payload: { page: number; limit: number; cond?: any }) {
+export async function getExamChangeRequests(payload: {
+  page: number;
+  limit: number;
+  cond?: any;
+}) {
   try {
     const { page, limit, cond } = payload;
     const response = await axiosInstance.get('/exam-change-requests/pageable', {
@@ -60,6 +68,9 @@ export async function getExamChangeRequestDetail(id: string) {
 }
 
 // Duyệt hoặc từ chối yêu cầu thay đổi đề thi
-export async function reviewExamChangeRequest(id: string, payload: { status: 'APPROVED' | 'REJECTED' }) {
+export async function reviewExamChangeRequest(
+  id: string,
+  payload: { status: 'APPROVED' | 'REJECTED' },
+) {
   return await axiosInstance.put(`/exam-change-requests/${id}/review`, payload);
-} 
+}

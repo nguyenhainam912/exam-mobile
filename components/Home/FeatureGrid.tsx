@@ -11,48 +11,73 @@ interface Feature {
   description?: string;
   code?: string;
   isActive?: boolean;
+  action?: string; // Thêm property này
 }
 
 interface FeatureGridProps {
   features: Feature[];
   title?: string;
   loading?: boolean;
+  onFeaturePress?: (action: string) => void; // Thêm prop mới
 }
 
 export function FeatureGrid({
   features,
   title = 'Đề thi theo môn',
   loading = false,
+  onFeaturePress,
 }: FeatureGridProps) {
-  return (
-    <View style={styles.container}>
-      {title && <Text style={styles.title}>{title}</Text>}
-
-      {loading ? (
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>{title}</Text>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.loadingText}>Đang tải môn học...</Text>
+          <Text style={styles.loadingText}>Đang tải...</Text>
         </View>
-      ) : features.length > 0 ? (
-        <View style={styles.grid}>
-          {features.map((item) => (
-            <FeatureButton
-              key={item.key}
-              label={item.label}
-              icon={item.icon}
-              color={item.color}
-              onPress={() => {
-                // TODO: Navigate to subject detail or exam list
-                console.log('Subject selected:', item);
-              }}
-            />
-          ))}
-        </View>
-      ) : (
+      </View>
+    );
+  }
+
+  if (features.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>{title}</Text>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Không có môn học nào</Text>
+          <Text style={styles.emptyText}>Không có dữ liệu</Text>
         </View>
-      )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>{title}</Text>
+      <View style={styles.grid}>
+        {features.map((feature) => (
+          <FeatureButton
+            key={feature.key}
+            label={feature.label}
+            color={feature.color}
+            icon={feature.icon}
+            onPress={() => {
+              console.log('🔵 FeatureButton pressed:', feature);
+
+              if (onFeaturePress) {
+                if (feature.action) {
+                  onFeaturePress(feature.action);
+                } else if (feature.subjectId) {
+                  onFeaturePress(feature.subjectId);
+                } else {
+                  onFeaturePress(feature.key);
+                }
+              } else {
+                console.log('🔴 onFeaturePress is not provided');
+              }
+            }}
+          />
+        ))}
+      </View>
     </View>
   );
 }

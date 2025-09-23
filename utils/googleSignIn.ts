@@ -57,6 +57,14 @@ export const signInWithGoogle = async (): Promise<GoogleSignInResult> => {
     // Kiểm tra Google Play Services
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
+    // THÊM DÒNG NÀY: Sign out trước để bắt buộc chọn tài khoản
+    try {
+      await GoogleSignin.signOut();
+    } catch (signOutError) {
+      // Ignore sign out errors (có thể chưa đăng nhập)
+      console.log('Sign out before sign in (expected if not signed in):', signOutError);
+    }
+
     // Thực hiện đăng nhập và lấy thông tin người dùng
     const userInfo = await GoogleSignin.signIn();
 

@@ -121,7 +121,6 @@ export default function LoginScreen() {
         setError(result.error || 'Đăng nhập với Google thất bại');
       }
     } catch (e: any) {
-      console.log('Google Sign-In error:', e);
       setError(e.message || 'Đăng nhập với Google thất bại. Vui lòng thử lại.');
     } finally {
       setGoogleLoading(false);

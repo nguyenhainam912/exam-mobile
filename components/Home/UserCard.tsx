@@ -23,7 +23,7 @@ export function UserCard({ name, className, avatar }: UserCardProps) {
       <Card.Content style={styles.content}>
         {avatar ? (
           <Avatar.Image
-            size={60}
+            size={50}
             source={{ uri: avatar }}
             style={styles.avatar}
           />
@@ -36,9 +36,7 @@ export function UserCard({ name, className, avatar }: UserCardProps) {
           />
         )}
         <View style={styles.textContainer}>
-          <Text variant="headlineSmall" style={styles.name}>
-            {name}
-          </Text>
+          <Text style={styles.name}>{name}</Text>
           <Text variant="bodyMedium" style={styles.class}>
             {className}
           </Text>
@@ -50,14 +48,14 @@ export function UserCard({ name, className, avatar }: UserCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    marginVertical: 16,
+    marginBottom: 10,
     backgroundColor: '#ffffff',
     borderRadius: 12,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    padding: 6,
   },
   avatar: {
     marginRight: 16,
@@ -66,7 +64,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#1F2937',
   },
   class: {

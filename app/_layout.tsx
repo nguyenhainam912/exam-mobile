@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     overflow: 'hidden',
-    marginBottom: 20, // Thêm margin bottom để đẩy lên
+    marginBottom: 14, // Thêm margin bottom để đẩy lên
   },
   tabButton: {
     flex: 1,

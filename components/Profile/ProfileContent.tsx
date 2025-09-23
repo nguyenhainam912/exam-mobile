@@ -1,5 +1,6 @@
 import { putUser } from '@@/services/user/user';
 import { useAppStore } from '@@/stores/appStore';
+import { signOutFromGoogle } from '@@/utils/googleSignIn';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -92,6 +93,7 @@ export function ProfileContent() {
 
   const confirmLogout = async () => {
     try {
+      await signOutFromGoogle();
       await AsyncStorage.removeItem('token');
       await AsyncStorage.multiRemove(['user_info', 'settings']);
 

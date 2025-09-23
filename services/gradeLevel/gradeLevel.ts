@@ -1,6 +1,10 @@
-import axiosInstance from '@/utils/axiosInstance';
+import axiosInstance from '@@/utils/axiosInstance';
 
-export async function getGradeLevels(payload: { page: number; limit: number; cond?: any }) {
+export async function getGradeLevels(payload: {
+  page: number;
+  limit: number;
+  cond?: any;
+}) {
   try {
     const { page, limit, cond } = payload;
     const response = await axiosInstance.get('/grade-levels', {
@@ -35,4 +39,4 @@ export async function getGradeLevelById(id: string) {
   } catch (error) {
     throw error;
   }
-} 
+}
