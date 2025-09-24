@@ -1,6 +1,7 @@
+import { GradeLevelFilterDialog } from '@@/components/ExamList/GradeLevelFilterDialog'; // Thêm import
 import { Exam } from '@@/services/exam';
 import { getExams } from '@@/services/exam/exam';
-import { getGradeLevels } from '@@/services/gradeLevel/gradeLevel'; // Thêm import
+import { getGradeLevels } from '@@/services/gradeLevel/gradeLevel';
 import { GradeLevelRecord } from '@@/stores/gradeLevel';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -12,17 +13,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import {
-  Button,
-  Card, // Thêm import
-  Checkbox, // Thêm import
-  Chip, // Thêm import
-  Dialog,
-  IconButton,
-  Portal,
-  Searchbar,
-  Text,
-} from 'react-native-paper';
+import { Card, Chip, IconButton, Searchbar, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ExamListScreen() {
@@ -40,13 +31,15 @@ export default function ExamListScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
 
-  // Thêm states cho filter
+  // Filter states
   const [gradeLevels, setGradeLevels] = useState<GradeLevelRecord[]>([]);
   const [selectedGradeLevels, setSelectedGradeLevels] = useState<string[]>([]);
+  const [tempSelectedGradeLevels, setTempSelectedGradeLevels] = useState<
+    string[]
+  >([]);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [loadingGradeLevels, setLoadingGradeLevels] = useState(false);
 
-  // Thêm function fetch grade levels
   const fetchGradeLevels = async () => {
     try {
       setLoadingGradeLevels(true);
@@ -68,14 +61,13 @@ export default function ExamListScreen() {
 
   const fetchExams = async (pageNum: number = 1, search: string = '') => {
     try {
-      // Kiểm tra subjectId trước khi sử dụng
       if (!subjectId) {
         console.error('Subject ID is required');
         return;
       }
 
       const cond: any = {
-        subjectId: subjectId, // Bây giờ TypeScript biết subjectId không phải undefined
+        subjectId: subjectId,
         isDeleted: false,
       };
 
@@ -83,7 +75,6 @@ export default function ExamListScreen() {
         cond.title = { $regex: search, $options: 'i' };
       }
 
-      // Thêm filter theo grade levels
       if (selectedGradeLevels.length > 0) {
         cond.gradeLevelId = { $in: selectedGradeLevels };
       }
@@ -116,18 +107,8 @@ export default function ExamListScreen() {
 
   useEffect(() => {
     fetchExams(1, '');
-    fetchGradeLevels(); // Thêm fetch grade levels
+    fetchGradeLevels();
   }, [subjectId]);
-
-  // Thêm effect để re-fetch khi filter thay đổi
-  useEffect(() => {
-    if (selectedGradeLevels.length >= 0) {
-      // Trigger cả khi có hoặc không có filter
-      setPage(1);
-      setLoading(true);
-      fetchExams(1, searchQuery);
-    }
-  }, [selectedGradeLevels]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -159,9 +140,9 @@ export default function ExamListScreen() {
     setSearchTimeout(newTimeout);
   };
 
-  // Thêm functions cho filter
+  // Filter functions
   const handleGradeLevelToggle = (gradeLevelId: string) => {
-    setSelectedGradeLevels((prev) => {
+    setTempSelectedGradeLevels((prev) => {
       if (prev.includes(gradeLevelId)) {
         return prev.filter((id) => id !== gradeLevelId);
       } else {
@@ -170,13 +151,31 @@ export default function ExamListScreen() {
     });
   };
 
-  const clearFilters = () => {
-    setSelectedGradeLevels([]);
+  const openFilterDialog = () => {
+    setTempSelectedGradeLevels(selectedGradeLevels);
+    setShowFilterDialog(true);
+  };
+
+  const closeFilterDialog = () => {
+    setTempSelectedGradeLevels(selectedGradeLevels);
     setShowFilterDialog(false);
   };
 
-  const applyFilters = () => {
+  const clearFilters = () => {
+    setTempSelectedGradeLevels([]);
+    setSelectedGradeLevels([]);
     setShowFilterDialog(false);
+    setPage(1);
+    setLoading(true);
+    fetchExams(1, searchQuery);
+  };
+
+  const applyFilters = () => {
+    setSelectedGradeLevels(tempSelectedGradeLevels);
+    setShowFilterDialog(false);
+    setPage(1);
+    setLoading(true);
+    fetchExams(1, searchQuery);
   };
 
   const getSelectedGradeLevelNames = () => {
@@ -287,7 +286,6 @@ export default function ExamListScreen() {
       </View>
 
       <View style={styles.searchContainer}>
-        {/* Cập nhật search container */}
         <View style={styles.searchRow}>
           <Searchbar
             placeholder="Tìm kiếm đề thi..."
@@ -303,11 +301,10 @@ export default function ExamListScreen() {
               selectedGradeLevels.length > 0 && styles.filterButtonActive,
             ]}
             iconColor={selectedGradeLevels.length > 0 ? '#8B5CF6' : '#6B7280'}
-            onPress={() => setShowFilterDialog(true)}
+            onPress={openFilterDialog}
           />
         </View>
 
-        {/* Thêm filter chips */}
         {selectedGradeLevels.length > 0 && (
           <View style={styles.filterChipsContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -337,62 +334,24 @@ export default function ExamListScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Thêm Filter Dialog */}
-      <Portal>
-        <Dialog
-          visible={showFilterDialog}
-          onDismiss={() => setShowFilterDialog(false)}
-          style={styles.dialog}
-        >
-          <Dialog.Title>Lọc theo lớp học</Dialog.Title>
-          <Dialog.Content>
-            {loadingGradeLevels ? (
-              <View style={styles.dialogLoading}>
-                <ActivityIndicator size="small" color="#8B5CF6" />
-                <Text style={styles.dialogLoadingText}>Đang tải...</Text>
-              </View>
-            ) : (
-              <ScrollView style={styles.gradeLevelsList}>
-                {gradeLevels.map((gradeLevel) => {
-                  // Thêm check để đảm bảo _id tồn tại
-                  if (!gradeLevel._id) return null;
-
-                  return (
-                    <View key={gradeLevel._id} style={styles.checkboxRow}>
-                      <Checkbox
-                        status={
-                          selectedGradeLevels.includes(gradeLevel._id)
-                            ? 'checked'
-                            : 'unchecked'
-                        }
-                        onPress={() =>
-                          handleGradeLevelToggle(gradeLevel._id || '')
-                        }
-                      />
-                      <Text
-                        style={styles.checkboxLabel}
-                        onPress={() =>
-                          handleGradeLevelToggle(gradeLevel._id || '')
-                        }
-                      >
-                        {gradeLevel.name}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            )}
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={clearFilters}>Xóa bộ lọc</Button>
-            <Button onPress={applyFilters}>Áp dụng</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      {/* Sử dụng component mới */}
+      <GradeLevelFilterDialog
+        visible={showFilterDialog}
+        onDismiss={closeFilterDialog}
+        gradeLevels={gradeLevels}
+        selectedGradeLevels={selectedGradeLevels}
+        tempSelectedGradeLevels={tempSelectedGradeLevels}
+        loadingGradeLevels={loadingGradeLevels}
+        onGradeLevelToggle={handleGradeLevelToggle}
+        onClearFilters={clearFilters}
+        onApplyFilters={applyFilters}
+        onCancel={closeFilterDialog}
+      />
     </SafeAreaView>
   );
 }
 
+// Xóa dialog styles khỏi styles chính
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -423,7 +382,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: 'white',
   },
-  // Thêm styles cho search row và filter
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -501,10 +459,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
-  footer: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -515,40 +469,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#8B5CF6',
-  },
-  // Thêm styles cho dialog
-  dialog: {
-    backgroundColor: 'white',
-  },
-  dialogLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  dialogLoadingText: {
-    marginLeft: 8,
-    color: '#6B7280',
-  },
-  gradeLevelsList: {
-    maxHeight: 300,
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  checkboxLabel: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#1F2937',
-    flex: 1,
   },
 });
