@@ -55,7 +55,7 @@ interface Subject {
 }
 
 export function HomeContent() {
-  const router = useRouter(); // Thêm router
+  const router = useRouter();
   const { currentUser } = useAppStore();
 
   // State để lưu features từ API
@@ -153,19 +153,19 @@ export function HomeContent() {
   // Hàm xử lý khi nhấn vào chức năng
   const handleManagementFeature = (action: string) => {
     console.log('Selected management feature:', action);
-    // TODO: Implement navigation hoặc actions cho từng chức năng
+
     switch (action) {
       case 'create-exam':
         // Navigate to create exam screen
-        console.log('Navigate to create exam');
+        router.push('/exams/create' as any);
         break;
       case 'upload-exam':
         // Navigate to upload exam screen
-        console.log('Navigate to upload exam');
+        router.push('/exams/upload' as any);
         break;
       case 'ai-exam':
         // Navigate to AI exam creation screen
-        console.log('Navigate to AI exam creation');
+        router.push('/exams/ai-create' as any);
         break;
       default:
         break;

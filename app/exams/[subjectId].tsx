@@ -1,4 +1,5 @@
-import { GradeLevelFilterDialog } from '@@/components/ExamList/GradeLevelFilterDialog'; // Thêm import
+import { ExamCard } from '@@/components/ExamList/ExamCard';
+import { GradeLevelFilterDialog } from '@@/components/ExamList/GradeLevelFilterDialog';
 import { Exam } from '@@/services/exam';
 import { getExams } from '@@/services/exam/exam';
 import { getGradeLevels } from '@@/services/gradeLevel/gradeLevel';
@@ -13,7 +14,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Card, Chip, IconButton, Searchbar, Text } from 'react-native-paper';
+import { Chip, IconButton, Searchbar, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ExamListScreen() {
@@ -193,51 +194,13 @@ export default function ExamListScreen() {
     };
   }, [searchTimeout]);
 
+  const handleDownload = (exam: Exam.Record) => {
+    console.log('Downloading exam:', exam.title);
+    // TODO: Implement download functionality
+  };
+
   const renderExamItem = ({ item }: { item: Exam.Record }) => (
-    <Card
-      style={styles.examCard}
-      onPress={() => router.push(`/exams/detail/${item._id}` as any)}
-    >
-      <Card.Content>
-        <View style={styles.examHeader}>
-          <Text style={styles.examTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <IconButton
-            icon="dots-vertical"
-            size={20}
-            onPress={() => {
-              // TODO: Show options menu
-            }}
-          />
-        </View>
-
-        {item.description && (
-          <Text style={styles.examDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-        )}
-
-        <View style={styles.examInfo}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Lớp:</Text>
-            <Text style={styles.infoValue}>{item.gradeLevelId.name}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Loại đề:</Text>
-            <Text style={styles.infoValue}>{item.examTypeId.name}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Thời gian:</Text>
-            <Text style={styles.infoValue}>{item.duration} phút</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Số câu hỏi:</Text>
-            <Text style={styles.infoValue}>{item.questions.length}</Text>
-          </View>
-        </View>
-      </Card.Content>
-    </Card>
+    <ExamCard exam={item} />
   );
 
   const renderEmpty = () => {
@@ -351,7 +314,7 @@ export default function ExamListScreen() {
   );
 }
 
-// Xóa dialog styles khỏi styles chính
+// Xóa các styles liên quan đến ExamCard
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -409,45 +372,6 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 16,
     paddingBottom: 80,
-  },
-  examCard: {
-    marginBottom: 12,
-    elevation: 2,
-    backgroundColor: 'white',
-  },
-  examHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  examTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    flex: 1,
-  },
-  examDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  examInfo: {
-    marginBottom: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1F2937',
   },
   loadingContainer: {
     flex: 1,

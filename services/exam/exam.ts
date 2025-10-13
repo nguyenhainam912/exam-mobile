@@ -74,3 +74,18 @@ export async function reviewExamChangeRequest(
 ) {
   return await axiosInstance.put(`/exam-change-requests/${id}/review`, payload);
 }
+
+export async function generateExamPdf(id: string) {
+  try {
+    const response = await axiosInstance.post(
+      `/exams/${id}/generate-pdf`,
+      {},
+      {
+        responseType: 'blob', // Important để xử lý file PDF
+      },
+    );
+    return response;
+  } catch (error) {
+    throw error;
+  }
+}
