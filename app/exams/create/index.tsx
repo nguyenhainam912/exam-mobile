@@ -1,34 +1,28 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import {
-  Appbar,
-  Button,
-  Card,
-  Divider,
-  HelperText,
-  List,
-  Modal,
-  Portal,
-  Searchbar, // Thêm import
-  Surface,
-  Text,
-  TextInput,
-} from 'react-native-paper';
+import { Appbar } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
-// Import services
+// Import services và types
+import { Exam } from '@@/services/exam/index.d';
 import { getExamTypes } from '@@/services/examType/examType';
 import { getGradeLevels } from '@@/services/gradeLevel/gradeLevel';
 import { getSubjects } from '@@/services/subject/subject';
+
+// Import components
+import ExamBasicInfoForm from '@@/components/forms/ExamBasicInfoForm';
+import ExamCategoryForm from '@@/components/forms/ExamCategoryForm';
+import QuestionsSection from '@@/components/forms/QuestionsSection';
+import SelectionModal from '@@/components/modals/SelectionModal';
+import ActionButtons from '@@/components/ui/ActionButtons';
 
 interface SelectItem {
   _id: string;
@@ -38,13 +32,17 @@ interface SelectItem {
 
 function CreateExamScreen() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+
+  // Sử dụng partial của Exam.Record cho form data
+  const [formData, setFormData] = useState<Partial<Exam.Record>>({
     title: '',
     description: '',
-    duration: '',
-    subjectId: '',
-    gradeLevelId: '',
-    examTypeId: '',
+    duration: 0,
+    subjectId: { _id: '', name: '' },
+    gradeLevelId: { _id: '', name: '' },
+    examTypeId: { _id: '', name: '' },
+    questions: [],
+    status: 'draft',
   });
 
   const [selectedItems, setSelectedItems] = useState({
@@ -53,6 +51,7 @@ function CreateExamScreen() {
     examType: null as SelectItem | null,
   });
 
+  const [questions, setQuestions] = useState<any[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +61,6 @@ function CreateExamScreen() {
     'subject' | 'gradeLevel' | 'examType'
   >('subject');
   const [modalData, setModalData] = useState<SelectItem[]>([]);
-  const [modalLoading, setModalLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Data cache
@@ -72,8 +70,109 @@ function CreateExamScreen() {
 
   // Fetch initial data
   useEffect(() => {
-    fetchAllData(); // Tạm comment để debug
+    fetchAllData();
+    // Tạo câu hỏi đầu tiên
+    addQuestion();
   }, []);
+
+  const generateId = () => {
+    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  };
+
+  const createNewQuestion = () => {
+    return {
+      id: generateId(),
+      content: '',
+      answers: [
+        { id: generateId(), text: '', isCorrect: false },
+        { id: generateId(), text: '', isCorrect: false },
+        { id: generateId(), text: '', isCorrect: false },
+        { id: generateId(), text: '', isCorrect: false },
+      ],
+      explanation: '',
+      difficulty: 2,
+    };
+  };
+
+  const addQuestion = () => {
+    setQuestions((prev) => [...prev, createNewQuestion()]);
+  };
+
+  const deleteQuestion = (questionId: string) => {
+    setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+
+    // Clear related errors
+    const newErrors = { ...errors };
+    Object.keys(newErrors).forEach((key) => {
+      if (key.includes(`question_${questionId}`)) {
+        delete newErrors[key];
+      }
+    });
+    setErrors(newErrors);
+  };
+
+  const handleQuestionChange = (
+    questionId: string,
+    field: string,
+    value: any,
+  ) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === questionId ? { ...q, [field]: value } : q)),
+    );
+
+    // Clear error if exists
+    const errorKey = `question_${questionId}_${field}`;
+    if (errors[errorKey]) {
+      setErrors((prev) => ({ ...prev, [errorKey]: '' }));
+    }
+  };
+
+  const handleAnswerChange = (
+    questionId: string,
+    answerId: string,
+    text: string,
+  ) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === questionId
+          ? {
+              ...q,
+              answers: q.answers.map((a: any) =>
+                a.id === answerId ? { ...a, text } : a,
+              ),
+            }
+          : q,
+      ),
+    );
+
+    // Clear error if exists
+    const errorKey = `question_${questionId}_answer_${answerId}`;
+    if (errors[errorKey]) {
+      setErrors((prev) => ({ ...prev, [errorKey]: '' }));
+    }
+  };
+
+  const handleCorrectAnswerChange = (questionId: string, answerId: string) => {
+    setQuestions((prev) =>
+      prev.map((q) =>
+        q.id === questionId
+          ? {
+              ...q,
+              answers: q.answers.map((a: any) => ({
+                ...a,
+                isCorrect: a.id === answerId,
+              })),
+            }
+          : q,
+      ),
+    );
+
+    // Clear correct answer error
+    const errorKey = `question_${questionId}_correct_answer`;
+    if (errors[errorKey]) {
+      setErrors((prev) => ({ ...prev, [errorKey]: '' }));
+    }
+  };
 
   const fetchAllData = async () => {
     try {
@@ -87,7 +186,6 @@ function CreateExamScreen() {
       const gradeLevelsData = gradeLevelsRes?.data?.result || [];
       const examTypesData = examTypesRes?.data?.result || [];
 
-      // Map chỉ lấy _id và name để đảm bảo cấu trúc
       const mappedSubjects = subjectsData.map((s: any) => ({
         _id: s._id,
         name: s.name,
@@ -116,15 +214,17 @@ function CreateExamScreen() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === 'duration') {
+      setFormData((prev) => ({ ...prev, [field]: Number(value) }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
 
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
-  // helper để hiển thị nhãn dễ hiểu
   const formatDurationLabel = (value: string) => {
     const num = Number(value);
     if (isNaN(num) || num <= 0) return '';
@@ -156,36 +256,26 @@ function CreateExamScreen() {
   };
 
   const handleSelectItem = (item: SelectItem) => {
-    const field =
-      modalType === 'subject'
-        ? 'subjectId'
-        : modalType === 'gradeLevel'
-        ? 'gradeLevelId'
-        : 'examTypeId';
+    const fieldMap = {
+      subject: 'subjectId',
+      gradeLevel: 'gradeLevelId',
+      examType: 'examTypeId',
+    };
 
-    setFormData((prev) => ({ ...prev, [field]: item._id }));
+    const field = fieldMap[modalType];
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: { _id: item._id, name: item.name },
+    }));
+
     setSelectedItems((prev) => ({ ...prev, [modalType]: item }));
 
-    // Clear error
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
 
     setModalVisible(false);
-  };
-
-  const getFilteredData = () => {
-    // Đảm bảo modalData luôn là array
-    const data = modalData || [];
-
-    if (!searchQuery) return data;
-
-    return data.filter(
-      (item) =>
-        item?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item?.code &&
-          item.code.toLowerCase().includes(searchQuery.toLowerCase())),
-    );
   };
 
   const getModalTitle = () => {
@@ -201,52 +291,65 @@ function CreateExamScreen() {
     }
   };
 
-  const getButtonText = (type: 'subject' | 'gradeLevel' | 'examType') => {
-    const item = selectedItems[type];
-    if (item) return item.name;
-
-    switch (type) {
-      case 'subject':
-        return 'Chọn môn học';
-      case 'gradeLevel':
-        return 'Chọn khối lớp';
-      case 'examType':
-        return 'Chọn loại đề thi';
-      default:
-        return 'Chọn';
-    }
-  };
-
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!formData.title.trim()) {
+    // Validate basic info
+    if (!formData.title?.trim()) {
       newErrors.title = 'Tiêu đề đề thi là bắt buộc';
     }
 
-    if (!formData.duration.trim()) {
-      newErrors.duration = 'Thời gian làm bài là bắt buộc';
-    } else {
-      const durationNum = Number(formData.duration);
-      if (isNaN(durationNum) || durationNum <= 0) {
-        newErrors.duration = 'Thời gian phải là số nguyên dương lớn hơn 0';
-      } else if (durationNum > 1440) {
-        // 24 giờ = 1440 phút
-        newErrors.duration = 'Thời gian không được vượt quá 1440 phút (24 giờ)';
-      }
+    if (!formData.duration || formData.duration <= 0) {
+      newErrors.duration = 'Thời gian làm bài là bắt buộc và phải lớn hơn 0';
+    } else if (formData.duration > 1440) {
+      newErrors.duration = 'Thời gian không được vượt quá 1440 phút (24 giờ)';
     }
 
-    if (!formData.subjectId) {
+    if (!formData.subjectId?._id) {
       newErrors.subjectId = 'Vui lòng chọn môn học';
     }
 
-    if (!formData.gradeLevelId) {
+    if (!formData.gradeLevelId?._id) {
       newErrors.gradeLevelId = 'Vui lòng chọn khối lớp';
     }
 
-    if (!formData.examTypeId) {
+    if (!formData.examTypeId?._id) {
       newErrors.examTypeId = 'Vui lòng chọn loại đề thi';
     }
+
+    // Validate questions
+    if (questions.length === 0) {
+      newErrors.questions = 'Phải có ít nhất 1 câu hỏi';
+    }
+
+    questions.forEach((question) => {
+      // Validate question content
+      if (!question.content?.trim()) {
+        newErrors[`question_${question.id}_content`] =
+          'Nội dung câu hỏi là bắt buộc';
+      }
+
+      // Validate answers
+      let hasCorrectAnswer = false;
+      let emptyAnswerCount = 0;
+
+      question.answers?.forEach((answer: any) => {
+        if (!answer.text?.trim()) {
+          emptyAnswerCount++;
+          newErrors[`question_${question.id}_answer_${answer.id}`] =
+            'Đáp án không được để trống';
+        }
+        if (answer.isCorrect) {
+          hasCorrectAnswer = true;
+        }
+      });
+
+      // Must have at least one correct answer
+      if (!hasCorrectAnswer) {
+        newErrors[`question_${question.id}_correct_answer`] =
+          'Phải chọn ít nhất 1 đáp án đúng';
+      }
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -257,11 +360,18 @@ function CreateExamScreen() {
 
     setLoading(true);
     try {
-      // TODO: Call API to create exam
-      console.log('Creating exam with data:', {
+      // Chuẩn bị dữ liệu theo Exam.Record interface
+      const examData: Partial<Exam.Record> = {
         ...formData,
-        duration: Number(formData.duration),
-      });
+        questions: questions.map((q) => ({
+          content: q.content,
+          answers: q.answers,
+          explanation: q.explanation,
+          difficulty: q.difficulty,
+        })),
+      };
+
+      console.log('Creating exam with data:', examData);
 
       Toast.show({
         type: 'success',
@@ -270,7 +380,6 @@ function CreateExamScreen() {
         position: 'bottom',
       });
 
-      // Navigate back or to next step
       router.back();
     } catch (error) {
       console.error('Error creating exam:', error);
@@ -285,7 +394,12 @@ function CreateExamScreen() {
     }
   };
 
-  const filteredData = getFilteredData();
+  // Convert formData for ExamBasicInfoForm
+  const formDataForBasicInfo = {
+    title: formData.title || '',
+    description: formData.description || '',
+    duration: formData.duration?.toString() || '',
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -294,251 +408,63 @@ function CreateExamScreen() {
         <Appbar.Content title="Tạo đề thi mới" />
       </Appbar.Header>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+      {/* Content area - chiếm hết không gian còn lại */}
+      <View style={styles.contentContainer}>
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <Card style={styles.card}>
-            <Card.Title
-              title="Thông tin cơ bản"
-              titleStyle={styles.cardTitle}
-            />
-            <Card.Content>
-              {/* Tiêu đề đề thi */}
-              <TextInput
-                label="Tiêu đề đề thi *"
-                value={formData.title}
-                onChangeText={(value) => handleInputChange('title', value)}
-                mode="outlined"
-                style={[styles.input, styles.roundedInput]}
-                error={!!errors.title}
-                left={<TextInput.Icon icon="text-box" />}
-                outlineColor="#5C28EBFF" // viền bình thường (nhạt)
-                activeOutlineColor="#7C3AED" // viền khi focus (tím đậm)
-                outlineStyle={{ borderRadius: 12 }} // bo tròn viền của Paper
-              />
-              <HelperText type="error" visible={!!errors.title}>
-                {errors.title}
-              </HelperText>
-
-              {/* Mô tả */}
-              <TextInput
-                label="Mô tả"
-                value={formData.description}
-                onChangeText={(value) =>
-                  handleInputChange('description', value)
-                }
-                mode="outlined"
-                multiline
-                numberOfLines={3}
-                style={[
-                  styles.input,
-                  styles.roundedInput,
-                  { marginBottom: 32 },
-                ]} // Thêm marginBottom để bù cho việc không có HelperText
-                left={<TextInput.Icon icon="text" />}
-                outlineColor="#5C28EBFF" // viền bình thường (nhạt)
-                activeOutlineColor="#7C3AED" // viền khi focus (tím đậm)
-                outlineStyle={{ borderRadius: 12 }} // bo tròn viền của Paper
-              />
-
-              {/* Thời gian làm bài */}
-              <TextInput
-                label="Thời gian làm bài (phút) *"
-                value={formData.duration}
-                onChangeText={(value) => {
-                  // Chỉ cho phép nhập số
-                  const numericValue = value.replace(/[^0-9]/g, '');
-                  handleInputChange('duration', numericValue);
-                }}
-                mode="outlined"
-                style={[styles.input, styles.roundedInput]}
-                error={!!errors.duration}
-                keyboardType="numeric"
-                left={<TextInput.Icon icon="clock-outline" />}
-                right={
-                  formData.duration ? (
-                    <TextInput.Affix
-                      text={
-                        formatDurationLabel(formData.duration)
-                          ? `(${formatDurationLabel(formData.duration)})`
-                          : 'phút'
-                      }
-                    />
-                  ) : null
-                }
-                outlineColor="#5C28EBFF"
-                activeOutlineColor="#7C3AED"
-                outlineStyle={{ borderRadius: 12 }}
-              />
-              <HelperText type="error" visible={!!errors.duration}>
-                {errors.duration}
-              </HelperText>
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.card}>
-            <Card.Title title="Phân loại" titleStyle={styles.cardTitle} />
-            <Card.Content>
-              {/* Môn học */}
-              <Text variant="labelLarge" style={styles.label}>
-                Môn học *
-              </Text>
-              <Button
-                mode="outlined"
-                onPress={() => openModal('subject')}
-                style={[
-                  styles.selectButton,
-                  errors.subjectId && styles.errorButton, // This can return "" (empty string)
-                ]}
-                contentStyle={styles.buttonContent}
-                icon="chevron-down"
-              >
-                {getButtonText('subject')}
-              </Button>
-              <HelperText type="error" visible={!!errors.subjectId}>
-                {errors.subjectId}
-              </HelperText>
-
-              {/* Khối lớp */}
-              <Text variant="labelLarge" style={styles.label}>
-                Khối lớp *
-              </Text>
-              <Button
-                mode="outlined"
-                onPress={() => openModal('gradeLevel')}
-                style={[
-                  styles.selectButton,
-                  errors.gradeLevelId && styles.errorButton,
-                ]}
-                contentStyle={styles.buttonContent}
-                icon="chevron-down"
-              >
-                {getButtonText('gradeLevel')}
-              </Button>
-              <HelperText type="error" visible={!!errors.gradeLevelId}>
-                {errors.gradeLevelId}
-              </HelperText>
-
-              {/* Loại đề thi */}
-              <Text variant="labelLarge" style={styles.label}>
-                Loại đề thi *
-              </Text>
-              <Button
-                mode="outlined"
-                onPress={() => openModal('examType')}
-                style={[
-                  styles.selectButton,
-                  errors.examTypeId && styles.errorButton,
-                ]}
-                contentStyle={styles.buttonContent}
-                icon="chevron-down"
-              >
-                {getButtonText('examType')}
-              </Button>
-              <HelperText type="error" visible={!!errors.examTypeId}>
-                {errors.examTypeId}
-              </HelperText>
-            </Card.Content>
-          </Card>
-
-          {/* Action buttons */}
-          <Surface style={styles.actionSurface} elevation={1}>
-            <Button
-              mode="outlined"
-              onPress={() => router.back()}
-              style={styles.cancelButton}
-              disabled={loading}
-            >
-              Hủy
-            </Button>
-            <Button
-              mode="contained"
-              onPress={handleSubmit}
-              style={styles.submitButton}
-              loading={loading}
-              disabled={loading}
-              icon="plus"
-            >
-              Tạo đề thi
-            </Button>
-          </Surface>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* Selection Modal */}
-      <Portal>
-        <Modal
-          visible={modalVisible}
-          onDismiss={() => setModalVisible(false)}
-          dismissable={true} // allow tap outside to dismiss
-          contentContainerStyle={styles.modalContainer} // changed
-        >
-          <Surface style={styles.modalSurface} elevation={5}>
-            <Text variant="headlineSmall" style={styles.modalTitle}>
-              {getModalTitle()}
-            </Text>
-
-            <Divider />
-
-            <Searchbar
-              placeholder="Tìm kiếm..."
-              onChangeText={setSearchQuery}
-              value={searchQuery}
-              style={styles.searchBar}
+          {/* Scroll area */}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <ExamBasicInfoForm
+              formData={formDataForBasicInfo}
+              errors={errors}
+              onInputChange={handleInputChange}
+              formatDurationLabel={formatDurationLabel}
             />
 
-            {/* Thay ScrollView bằng FlatList để render ổn định */}
-            <FlatList
-              data={filteredData}
-              keyExtractor={(item) => item._id}
-              style={styles.modalList}
-              contentContainerStyle={{ paddingBottom: 24 }}
-              extraData={selectedItems[modalType]} // đảm bảo rerender khi chọn
-              renderItem={({ item }) => (
-                <List.Item
-                  title={item.name}
-                  onPress={() => handleSelectItem(item)}
-                  left={(props) => (
-                    <List.Icon
-                      {...props}
-                      icon={
-                        selectedItems[modalType]?._id === item._id
-                          ? 'check-circle'
-                          : 'circle-outline'
-                      }
-                    />
-                  )}
-                  style={
-                    selectedItems[modalType]?._id === item._id &&
-                    styles.selectedItem
-                  }
-                />
-              )}
-              ListEmptyComponent={() => (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>
-                    {searchQuery
-                      ? 'Không tìm thấy kết quả'
-                      : 'Không có dữ liệu'}
-                  </Text>
-                </View>
-              )}
+            <ExamCategoryForm
+              selectedItems={selectedItems}
+              errors={errors}
+              onOpenModal={openModal}
             />
 
-            <Divider />
+            <QuestionsSection
+              questions={questions}
+              errors={errors}
+              onQuestionChange={handleQuestionChange}
+              onAnswerChange={handleAnswerChange}
+              onCorrectAnswerChange={handleCorrectAnswerChange}
+              onAddQuestion={addQuestion}
+              onDeleteQuestion={deleteQuestion}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
 
-            <View style={styles.modalActions}>
-              <Button onPress={() => setModalVisible(false)}>Đóng</Button>
-            </View>
-          </Surface>
-        </Modal>
-      </Portal>
+      {/* Action buttons - cố định ở cuối tuyệt đối */}
+      <View style={styles.actionContainer}>
+        <ActionButtons
+          loading={loading}
+          onCancel={() => router.back()}
+          onSubmit={handleSubmit}
+        />
+      </View>
+
+      <SelectionModal
+        visible={modalVisible}
+        title={getModalTitle()}
+        data={modalData}
+        selectedItem={selectedItems[modalType]}
+        searchQuery={searchQuery}
+        onDismiss={() => setModalVisible(false)}
+        onSearchChange={setSearchQuery}
+        onSelectItem={handleSelectItem}
+      />
     </SafeAreaView>
   );
 }
@@ -546,6 +472,10 @@ function CreateExamScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  contentContainer: {
+    flex: 1, // Chiếm hết không gian còn lại
   },
   keyboardView: {
     flex: 1,
@@ -555,89 +485,27 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 44, // Padding để content không bị che bởi action buttons
   },
-  card: {
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  input: {
-    marginBottom: 16,
-  },
-  label: {
-    marginBottom: 8,
-    marginTop: 16,
-  },
-  selectButton: {
-    justifyContent: 'flex-start',
-    marginBottom: 8,
-  },
-  errorButton: {
-    borderColor: '#B91C1C',
-    borderWidth: 1,
-  },
-  buttonContent: {
-    justifyContent: 'flex-start',
-  },
-  actionSurface: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-    marginTop: 16,
-    borderRadius: 12,
-  },
-  cancelButton: {
-    flex: 1,
-  },
-  submitButton: {
-    flex: 2,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20, // Tăng padding
-  },
-  modalSurface: {
-    width: '100%', // Tăng từ 95% lên 100%
-    maxWidth: 500, // Giảm maxWidth để phù hợp mobile
-    minHeight: 400, // Thêm minHeight
-    maxHeight: '80%',
-    borderRadius: 16,
+  actionContainer: {
+    position: 'absolute', // Cố định tuyệt đối
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#fff',
-  },
-  modalTitle: {
-    textAlign: 'center',
-    padding: 16,
-    fontWeight: 'bold', // Thêm để title nổi bật hơn
-  },
-  searchBar: {
-    margin: 16,
-    marginTop: 8,
-  },
-  modalList: {
-    flex: 1,
-    minHeight: 200, // Thêm minHeight cho list
-  },
-  emptyContainer: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#6B7280',
-  },
-  selectedItem: {
-    backgroundColor: '#EDE9FE',
-  },
-  modalActions: {
-    padding: 16,
-    alignItems: 'flex-end',
-  },
-  roundedInput: {
-    borderRadius: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 50, // Thêm padding bottom cho safe area
+    elevation: 8, // Shadow cho Android
+    shadowColor: '#000', // Shadow cho iOS
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
 });
 
