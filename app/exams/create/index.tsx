@@ -36,7 +36,7 @@ interface SelectItem {
   code?: string;
 }
 
-export default function CreateExamScreen() {
+function CreateExamScreen() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: '',
@@ -72,7 +72,7 @@ export default function CreateExamScreen() {
 
   // Fetch initial data
   useEffect(() => {
-    fetchAllData();
+    fetchAllData(); // Tạm comment để debug
   }, []);
 
   const fetchAllData = async () => {
@@ -122,6 +122,16 @@ export default function CreateExamScreen() {
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
+  };
+
+  // helper để hiển thị nhãn dễ hiểu
+  const formatDurationLabel = (value: string) => {
+    const num = Number(value);
+    if (isNaN(num) || num <= 0) return '';
+    const h = Math.floor(num / 60);
+    const m = num % 60;
+    if (h > 0) return `${h} giờ ${m} phút`;
+    return `${m} phút`;
   };
 
   const openModal = (type: 'subject' | 'gradeLevel' | 'examType') => {
@@ -216,11 +226,14 @@ export default function CreateExamScreen() {
 
     if (!formData.duration.trim()) {
       newErrors.duration = 'Thời gian làm bài là bắt buộc';
-    } else if (
-      isNaN(Number(formData.duration)) ||
-      Number(formData.duration) <= 0
-    ) {
-      newErrors.duration = 'Thời gian phải là số dương';
+    } else {
+      const durationNum = Number(formData.duration);
+      if (isNaN(durationNum) || durationNum <= 0) {
+        newErrors.duration = 'Thời gian phải là số nguyên dương lớn hơn 0';
+      } else if (durationNum > 1440) {
+        // 24 giờ = 1440 phút
+        newErrors.duration = 'Thời gian không được vượt quá 1440 phút (24 giờ)';
+      }
     }
 
     if (!formData.subjectId) {
@@ -304,7 +317,6 @@ export default function CreateExamScreen() {
                 mode="outlined"
                 style={[styles.input, styles.roundedInput]}
                 error={!!errors.title}
-                placeholder="Nhập tiêu đề đề thi"
                 left={<TextInput.Icon icon="text-box" />}
                 outlineColor="#5C28EBFF" // viền bình thường (nhạt)
                 activeOutlineColor="#7C3AED" // viền khi focus (tím đậm)
@@ -324,7 +336,11 @@ export default function CreateExamScreen() {
                 mode="outlined"
                 multiline
                 numberOfLines={3}
-                style={[styles.input, styles.roundedInput]}
+                style={[
+                  styles.input,
+                  styles.roundedInput,
+                  { marginBottom: 32 },
+                ]} // Thêm marginBottom để bù cho việc không có HelperText
                 left={<TextInput.Icon icon="text" />}
                 outlineColor="#5C28EBFF" // viền bình thường (nhạt)
                 activeOutlineColor="#7C3AED" // viền khi focus (tím đậm)
@@ -335,14 +351,28 @@ export default function CreateExamScreen() {
               <TextInput
                 label="Thời gian làm bài (phút) *"
                 value={formData.duration}
-                onChangeText={(value) => handleInputChange('duration', value)}
+                onChangeText={(value) => {
+                  // Chỉ cho phép nhập số
+                  const numericValue = value.replace(/[^0-9]/g, '');
+                  handleInputChange('duration', numericValue);
+                }}
                 mode="outlined"
-                keyboardType="numeric"
                 style={[styles.input, styles.roundedInput]}
                 error={!!errors.duration}
-                placeholder="Nhập thời gian làm bài"
+                keyboardType="numeric"
                 left={<TextInput.Icon icon="clock-outline" />}
-                outlineColor="#C7B2FF"
+                right={
+                  formData.duration ? (
+                    <TextInput.Affix
+                      text={
+                        formatDurationLabel(formData.duration)
+                          ? `(${formatDurationLabel(formData.duration)})`
+                          : 'phút'
+                      }
+                    />
+                  ) : null
+                }
+                outlineColor="#5C28EBFF"
                 activeOutlineColor="#7C3AED"
                 outlineStyle={{ borderRadius: 12 }}
               />
@@ -364,7 +394,7 @@ export default function CreateExamScreen() {
                 onPress={() => openModal('subject')}
                 style={[
                   styles.selectButton,
-                  errors.subjectId && styles.errorButton,
+                  errors.subjectId && styles.errorButton, // This can return "" (empty string)
                 ]}
                 contentStyle={styles.buttonContent}
                 icon="chevron-down"
@@ -535,18 +565,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   input: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
   label: {
     marginBottom: 8,
-    marginTop: 8,
+    marginTop: 16,
   },
   selectButton: {
     justifyContent: 'flex-start',
     marginBottom: 8,
   },
   errorButton: {
-    // Paper sẽ tự động handle error styling
+    borderColor: '#B91C1C',
+    borderWidth: 1,
   },
   buttonContent: {
     justifyContent: 'flex-start',
@@ -564,27 +595,24 @@ const styles = StyleSheet.create({
   submitButton: {
     flex: 2,
   },
-  // Modal styles - sử dụng Paper components (wider / centered)
   modalContainer: {
-    // Chiếm toàn màn hình để backdrop nhận sự kiện chạm khi bấm ngoài modal
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    padding: 20, // Tăng padding
   },
   modalSurface: {
-    width: '95%',
-    maxWidth: 900,
-    borderRadius: 16,
-    // Dùng maxHeight để modal có thể cuộn trong khi backdrop vẫn phủ toàn màn hình
+    width: '100%', // Tăng từ 95% lên 100%
+    maxWidth: 500, // Giảm maxWidth để phù hợp mobile
+    minHeight: 400, // Thêm minHeight
     maxHeight: '80%',
-    overflow: 'hidden',
+    borderRadius: 16,
     backgroundColor: '#fff',
   },
-
   modalTitle: {
     textAlign: 'center',
     padding: 16,
+    fontWeight: 'bold', // Thêm để title nổi bật hơn
   },
   searchBar: {
     margin: 16,
@@ -592,9 +620,7 @@ const styles = StyleSheet.create({
   },
   modalList: {
     flex: 1,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
-    width: '100%', // đảm bảo list chiếm toàn bộ ngang modalSurface
+    minHeight: 200, // Thêm minHeight cho list
   },
   emptyContainer: {
     padding: 24,
@@ -614,3 +640,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 });
+
+export default CreateExamScreen;

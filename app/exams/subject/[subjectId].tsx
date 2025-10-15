@@ -99,6 +99,7 @@ export default function ExamListScreen() {
         setPage(pageNum);
       }
     } catch (error) {
+      console.error('hiii1 exams:', error);
       console.error('Error fetching exams:', error);
     } finally {
       setLoading(false);

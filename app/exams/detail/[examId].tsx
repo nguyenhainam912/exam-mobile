@@ -26,6 +26,7 @@ export default function ExamDetailScreen() {
         setExam(response.data);
       }
     } catch (error) {
+      console.error('hiii222 exams:', error);
       console.error('Error fetching exam detail:', error);
     } finally {
       setLoading(false);

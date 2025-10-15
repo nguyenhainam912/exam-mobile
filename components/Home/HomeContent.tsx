@@ -157,7 +157,7 @@ export function HomeContent() {
     switch (action) {
       case 'create-exam':
         // Navigate to create exam screen
-        router.push('/exams/create' as any);
+        router.push('/exams/create');
         break;
       case 'upload-exam':
         // Navigate to upload exam screen
@@ -177,7 +177,7 @@ export function HomeContent() {
 
     const subjectName = subject?.label || 'Đề thi';
 
-    const navigationPath = `/exams/${subjectId}?subjectName=${encodeURIComponent(
+    const navigationPath = `/exams/subject/${subjectId}?subjectName=${encodeURIComponent(
       subjectName,
     )}`;
 
