@@ -6,6 +6,9 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { Card, Divider, IconButton, Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Import MathRenderer - đảm bảo đường dẫn đúng
+import MathRenderer from '@@/components/ui/MathRenderer';
+
 export default function ExamDetailScreen() {
   const { examId } = useLocalSearchParams<{ examId: string }>();
   const router = useRouter();
@@ -26,7 +29,6 @@ export default function ExamDetailScreen() {
         setExam(response.data);
       }
     } catch (error) {
-      console.error('hiii222 exams:', error);
       console.error('Error fetching exam detail:', error);
     } finally {
       setLoading(false);
@@ -44,18 +46,54 @@ export default function ExamDetailScreen() {
           <Text style={styles.questionNumber}>Câu {index + 1}</Text>
         </View>
 
-        <Text style={styles.questionContent}>{question.content}</Text>
+        {/* Sử dụng MathRenderer cho nội dung câu hỏi */}
+        <View style={styles.questionContentContainer}>
+          <MathRenderer
+            content={question.content || ''}
+            fontSize={16}
+            color="#1F2937"
+          />
+        </View>
 
         <View style={styles.optionsContainer}>
-          {question?.options.map((option: any, optionIndex: any) => (
+          {question?.options?.map((option: any, optionIndex: number) => (
             <View key={optionIndex} style={styles.optionItem}>
               <Text style={styles.optionLabel}>
                 {String.fromCharCode(65 + optionIndex)}.
               </Text>
-              <Text style={styles.optionText}>{option}</Text>
+              <View style={styles.optionContentContainer}>
+                <MathRenderer
+                  content={option || ''}
+                  fontSize={14}
+                  color="#1F2937"
+                />
+              </View>
             </View>
           ))}
         </View>
+
+        {/* Hiển thị giải thích nếu có */}
+        {question.explanation && (
+          <View style={styles.explanationContainer}>
+            <Text style={styles.explanationTitle}>Giải thích:</Text>
+            <View style={styles.explanationContentContainer}>
+              <MathRenderer
+                content={question.explanation}
+                fontSize={14}
+                color="#4B5563"
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Hiển thị độ khó nếu có */}
+        {question.difficulty && (
+          <View style={styles.difficultyContainer}>
+            <Text style={styles.difficultyLabel}>
+              Độ khó: {question.difficulty}/5
+            </Text>
+          </View>
+        )}
       </Card.Content>
     </Card>
   );
@@ -112,11 +150,22 @@ export default function ExamDetailScreen() {
         <Card style={styles.infoCard}>
           <Card.Content>
             <View style={styles.examTitleContainer}>
-              <Text style={styles.examTitle}>{exam.title}</Text>
+              <MathRenderer
+                content={exam.title || ''}
+                fontSize={20}
+                color="#1F2937"
+                textStyle={{ fontWeight: '700' }}
+              />
             </View>
 
             {exam.description && (
-              <Text style={styles.examDescription}>{exam.description}</Text>
+              <View style={styles.examDescriptionContainer}>
+                <MathRenderer
+                  content={exam.description}
+                  fontSize={16}
+                  color="#4B5563"
+                />
+              </View>
             )}
 
             <Divider style={styles.divider} />
@@ -124,11 +173,15 @@ export default function ExamDetailScreen() {
             <View style={styles.infoGrid}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Lớp:</Text>
-                <Text style={styles.infoValue}>{exam.gradeLevelId.name}</Text>
+                <Text style={styles.infoValue}>
+                  {exam.gradeLevelId?.name || 'N/A'}
+                </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Loại đề:</Text>
-                <Text style={styles.infoValue}>{exam.examTypeId.name}</Text>
+                <Text style={styles.infoValue}>
+                  {exam.examTypeId?.name || 'N/A'}
+                </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Thời gian:</Text>
@@ -136,7 +189,9 @@ export default function ExamDetailScreen() {
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Số câu hỏi:</Text>
-                <Text style={styles.infoValue}>{exam.questions.length}</Text>
+                <Text style={styles.infoValue}>
+                  {exam.questions?.length || 0}
+                </Text>
               </View>
             </View>
           </Card.Content>
@@ -145,9 +200,9 @@ export default function ExamDetailScreen() {
         {/* Questions Section */}
         <View style={styles.questionsSection}>
           <Text style={styles.sectionTitle}>
-            Danh sách câu hỏi ({exam.questions.length})
+            Danh sách câu hỏi ({exam.questions?.length || 0})
           </Text>
-          {exam.questions.map((question, index) =>
+          {exam.questions?.map((question, index) =>
             renderQuestion(question, index),
           )}
         </View>
@@ -193,23 +248,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   examTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
     marginBottom: 12,
+    minHeight: 30,
   },
-  examTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
-    flex: 1,
-    marginRight: 12,
-  },
-  examDescription: {
-    fontSize: 16,
-    color: '#4B5563',
-    lineHeight: 24,
+  examDescriptionContainer: {
     marginBottom: 16,
+    minHeight: 25,
   },
   divider: {
     marginVertical: 16,
@@ -254,11 +298,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#8B5CF6',
   },
-  questionContent: {
-    fontSize: 16,
-    color: '#1F2937',
-    lineHeight: 24,
+  questionContentContainer: {
     marginBottom: 16,
+    minHeight: 30,
   },
   optionsContainer: {
     gap: 8,
@@ -280,11 +322,38 @@ const styles = StyleSheet.create({
     marginRight: 8,
     minWidth: 20,
   },
-  optionText: {
-    fontSize: 14,
-    color: '#1F2937',
+  optionContentContainer: {
     flex: 1,
-    lineHeight: 20,
+    minHeight: 20,
+  },
+  explanationContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
+  },
+  explanationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8B5CF6',
+    marginBottom: 8,
+  },
+  explanationContentContainer: {
+    minHeight: 20,
+  },
+  difficultyContainer: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  difficultyLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   loadingContainer: {
     flex: 1,
