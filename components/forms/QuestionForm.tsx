@@ -1,19 +1,16 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import {
-  Button,
   Card,
-  Chip,
   IconButton,
+  RadioButton,
   Text,
   TextInput,
 } from 'react-native-paper';
-import ErrorHelperText from '../ui/ErrorHelperText';
-
-// Sử dụng interface có sẵn từ services
+import MathRenderer from '../ui/MathRenderer';
 
 interface QuestionFormProps {
-  question: any; // Sử dụng any từ Exam.Record.questions
+  question: any;
   questionIndex: number;
   errors: { [key: string]: string };
   onQuestionChange: (questionId: string, field: string, value: any) => void;
@@ -33,151 +30,245 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
   onDeleteQuestion,
   canDelete,
 }) => {
-  const getDifficultyLabel = (value: number) => {
-    const labels = ['', 'Rất dễ', 'Dễ', 'Trung bình', 'Khó', 'Rất khó'];
-    return labels[value] || '';
-  };
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const tapCountRef = useRef<{
+    [key: string]: { count: number; timeout: number | null };
+  }>({});
+  const blurTimeoutRef = useRef<number | null>(null);
 
-  const getDifficultyColor = (value: number) => {
-    const colors = ['', '#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336'];
-    return colors[value] || '#757575';
-  };
+  // Xử lý double tap
+  const handleTap = useCallback((fieldId: string) => {
+    if (!tapCountRef.current[fieldId]) {
+      tapCountRef.current[fieldId] = { count: 0, timeout: null };
+    }
 
-  const difficultyLevels = [1, 2, 3, 4, 5];
+    const tapData = tapCountRef.current[fieldId];
+
+    if (tapData.timeout) {
+      clearTimeout(tapData.timeout);
+    }
+
+    tapData.count += 1;
+
+    if (tapData.count === 2) {
+      // Double tap - vào edit mode
+      setEditingField(fieldId);
+      tapData.count = 0;
+      tapData.timeout = null;
+    } else {
+      // Single tap - chờ tap thứ 2
+      tapData.timeout = window.setTimeout(() => {
+        tapData.count = 0;
+        tapData.timeout = null;
+      }, 300);
+    }
+  }, []);
+
+  const handleQuestionTap = useCallback(() => {
+    handleTap(`question-${question.id}`);
+  }, [question.id, handleTap]);
+
+  const handleAnswerTap = useCallback(
+    (answerId: string) => {
+      handleTap(`answer-${answerId}`);
+    },
+    [handleTap],
+  );
+
+  // Focus - set editing field và cancel blur timeout
+  const handleQuestionFocus = useCallback(() => {
+    // Cancel blur timeout nếu có
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    setEditingField(`question-${question.id}`);
+  }, [question.id]);
+
+  const handleAnswerFocus = useCallback((answerId: string) => {
+    // Cancel blur timeout nếu có
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    setEditingField(`answer-${answerId}`);
+  }, []);
+
+  // Blur - CHỈ clear sau một khoảng delay (để đợi xem có focus lại không)
+  const handleQuestionBlur = useCallback(() => {
+    // Chỉ blur nếu có nội dung
+    if (question.question_text) {
+      // Delay 100ms trước khi blur thật sự
+      blurTimeoutRef.current = window.setTimeout(() => {
+        setEditingField((current) => {
+          // Chỉ clear nếu đang edit câu hỏi này
+          if (current === `question-${question.id}`) {
+            return null;
+          }
+          return current;
+        });
+        blurTimeoutRef.current = null;
+      }, 100);
+    }
+  }, [question.id, question.question_text]);
+
+  const handleAnswerBlur = useCallback(
+    (answerId: string) => {
+      // Tìm answer để kiểm tra có text không
+      const answer = question.answers?.find((a: any) => a.id === answerId);
+
+      // Chỉ blur nếu có nội dung
+      if (answer && answer.answer_text) {
+        // Delay 100ms trước khi blur thật sự
+        blurTimeoutRef.current = window.setTimeout(() => {
+          setEditingField((current) => {
+            // Chỉ clear nếu đang edit câu trả lời này
+            if (current === `answer-${answerId}`) {
+              return null;
+            }
+            return current;
+          });
+          blurTimeoutRef.current = null;
+        }, 100);
+      }
+    },
+    [question.answers],
+  );
+
+  const isQuestionEditing = editingField === `question-${question.id}`;
+  const isAnswerEditing = (answerId: string) =>
+    editingField === `answer-${answerId}`;
+
+  // Hiển thị input nếu: CHƯA có text HOẶC đang edit
+  const shouldShowQuestionInput = !question.question_text || isQuestionEditing;
+  const shouldShowAnswerInput = (answer: any) =>
+    !answer.answer_text || isAnswerEditing(answer.id);
 
   return (
     <Card style={styles.questionCard}>
-      <Card.Title
-        title={`Câu hỏi ${questionIndex + 1}`}
-        titleStyle={styles.cardTitle}
-        right={() =>
-          canDelete ? (
+      <Card.Content>
+        <View style={styles.questionHeader}>
+          <View style={styles.inputWrapper}>
+            {shouldShowQuestionInput ? (
+              <TextInput
+                label={`Câu hỏi ${questionIndex + 1}`}
+                value={question.question_text}
+                onChangeText={(text) =>
+                  onQuestionChange(question.id, 'question_text', text)
+                }
+                onFocus={handleQuestionFocus}
+                onBlur={handleQuestionBlur}
+                style={styles.input}
+                mode="outlined"
+                multiline
+                error={!!errors[`question_${question.id}`]}
+                autoFocus={isQuestionEditing}
+                outlineColor="#E5E7EB"
+                activeOutlineColor="#8B5CF6"
+                outlineStyle={styles.inputOutline}
+                contentStyle={styles.inputContent}
+                theme={{
+                  colors: {
+                    primary: '#8B5CF6',
+                  },
+                  roundness: 12,
+                }}
+              />
+            ) : (
+              <TouchableWithoutFeedback onPress={handleQuestionTap}>
+                <View style={styles.mathPreviewClickable}>
+                  <Text style={styles.label}>Câu hỏi {questionIndex + 1}</Text>
+                  <MathRenderer
+                    content={question.question_text}
+                    fontSize={14}
+                    color="#1F2937"
+                  />
+                  <Text style={styles.doubleTapHint}>
+                    Nhấn đúp để chỉnh sửa
+                  </Text>
+                </View>
+              </TouchableWithoutFeedback>
+            )}
+          </View>
+          {canDelete && (
             <IconButton
               icon="delete"
-              iconColor="#F44336"
+              size={20}
+              iconColor="#EF4444"
               onPress={() => onDeleteQuestion(question.id)}
             />
-          ) : null
-        }
-      />
-      <Card.Content>
-        {/* Nội dung câu hỏi */}
-        <Text variant="labelLarge" style={styles.label}>
-          * Nội dung câu hỏi
-        </Text>
-        <TextInput
-          value={question.content || ''}
-          onChangeText={(value) =>
-            onQuestionChange(question.id, 'content', value)
-          }
-          mode="outlined"
-          multiline
-          numberOfLines={3}
-          style={[styles.input, styles.roundedInput]}
-          error={!!errors[`question_${question.id}_content`]}
-          outlineColor="#5C28EBFF"
-          activeOutlineColor="#7C3AED"
-          outlineStyle={{ borderRadius: 12 }}
-        />
-        <ErrorHelperText error={errors[`question_${question.id}_content`]} />
+          )}
+        </View>
 
-        {/* Các lựa chọn */}
-        <Text variant="labelLarge" style={styles.sectionLabel}>
-          Các lựa chọn (A, B, C, D) * Đáp án
-        </Text>
+        {errors[`question_${question.id}`] && (
+          <Text style={styles.errorText}>
+            {errors[`question_${question.id}`]}
+          </Text>
+        )}
 
-        {question.answers?.map((answer: any, index: number) => (
-          <View key={answer.id} style={styles.answerContainer}>
-            <View style={styles.answerRow}>
-              <TextInput
-                placeholder={`Đáp án ${String.fromCharCode(65 + index)}`}
-                value={answer.text || ''}
-                onChangeText={(value) =>
-                  onAnswerChange(question.id, answer.id, value)
-                }
-                mode="outlined"
-                style={[styles.answerInput, styles.roundedInput]}
-                error={!!errors[`question_${question.id}_answer_${answer.id}`]}
-                outlineColor="#5C28EBFF"
-                activeOutlineColor="#7C3AED"
-                outlineStyle={{ borderRadius: 12 }}
-              />
-              <IconButton
-                icon={answer.isCorrect ? 'check-circle' : 'circle-outline'}
-                iconColor={answer.isCorrect ? '#4CAF50' : '#757575'}
+        <View style={styles.answersContainer}>
+          {question.answers?.map((answer: any, answerIndex: number) => (
+            <View key={answer.id} style={styles.answerRow}>
+              <RadioButton
+                value={answer.id}
+                status={answer.is_correct ? 'checked' : 'unchecked'}
                 onPress={() => onCorrectAnswerChange(question.id, answer.id)}
-                style={styles.correctButton}
+                color="#8B5CF6"
               />
+              <View style={styles.answerInputContainer}>
+                {shouldShowAnswerInput(answer) ? (
+                  <TextInput
+                    label={`Câu trả lời ${answerIndex + 1}`}
+                    value={answer.answer_text}
+                    onChangeText={(text) =>
+                      onAnswerChange(question.id, answer.id, text)
+                    }
+                    onFocus={() => handleAnswerFocus(answer.id)}
+                    onBlur={() => handleAnswerBlur(answer.id)}
+                    style={styles.answerInput}
+                    mode="outlined"
+                    multiline
+                    error={!!errors[`answer_${answer.id}`]}
+                    autoFocus={isAnswerEditing(answer.id)}
+                    outlineColor="#E5E7EB"
+                    activeOutlineColor="#8B5CF6"
+                    outlineStyle={styles.inputOutline}
+                    contentStyle={styles.inputContent}
+                    theme={{
+                      colors: {
+                        primary: '#8B5CF6',
+                      },
+                      roundness: 12,
+                    }}
+                  />
+                ) : (
+                  <TouchableWithoutFeedback
+                    onPress={() => handleAnswerTap(answer.id)}
+                  >
+                    <View style={styles.mathPreviewClickable}>
+                      <Text style={styles.label}>
+                        Câu trả lời {answerIndex + 1}
+                      </Text>
+                      <MathRenderer
+                        content={answer.answer_text}
+                        fontSize={13}
+                        color="#374151"
+                      />
+                      <Text style={styles.doubleTapHint}>
+                        Nhấn đúp để chỉnh sửa
+                      </Text>
+                    </View>
+                  </TouchableWithoutFeedback>
+                )}
+
+                {errors[`answer_${answer.id}`] && (
+                  <Text style={styles.errorText}>
+                    {errors[`answer_${answer.id}`]}
+                  </Text>
+                )}
+              </View>
             </View>
-            <ErrorHelperText
-              error={errors[`question_${question.id}_answer_${answer.id}`]}
-            />
-          </View>
-        ))}
-
-        {/* Giải thích */}
-        <Text variant="labelLarge" style={styles.sectionLabel}>
-          Giải thích (explanation)
-        </Text>
-        <TextInput
-          value={question.explanation || ''}
-          onChangeText={(value) =>
-            onQuestionChange(question.id, 'explanation', value)
-          }
-          mode="outlined"
-          multiline
-          numberOfLines={3}
-          style={[styles.input, styles.roundedInput]}
-          outlineColor="#5C28EBFF"
-          activeOutlineColor="#7C3AED"
-          outlineStyle={{ borderRadius: 12 }}
-        />
-
-        {/* Độ khó */}
-        <Text variant="labelLarge" style={styles.sectionLabel}>
-          Độ khó (1-5)
-        </Text>
-        <View style={styles.difficultyContainer}>
-          <View style={styles.difficultyButtons}>
-            {difficultyLevels.map((level) => (
-              <Button
-                key={level}
-                mode={question.difficulty === level ? 'contained' : 'outlined'}
-                onPress={() =>
-                  onQuestionChange(question.id, 'difficulty', level)
-                }
-                style={[
-                  styles.difficultyButton,
-                  question.difficulty === level && {
-                    backgroundColor: getDifficultyColor(level),
-                  },
-                ]}
-                contentStyle={styles.buttonContent}
-                labelStyle={[
-                  styles.buttonLabel,
-                  {
-                    color:
-                      question.difficulty === level
-                        ? '#fff'
-                        : getDifficultyColor(level),
-                  },
-                ]}
-                compact
-              >
-                {level}
-              </Button>
-            ))}
-          </View>
-          <Chip
-            mode="outlined"
-            style={[
-              styles.difficultyChip,
-              { borderColor: getDifficultyColor(question.difficulty || 2) },
-            ]}
-            textStyle={{ color: getDifficultyColor(question.difficulty || 2) }}
-          >
-            {getDifficultyLabel(question.difficulty || 2)}
-          </Chip>
+          ))}
         </View>
       </Card.Content>
     </Card>
@@ -187,67 +278,70 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
 const styles = StyleSheet.create({
   questionCard: {
     marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  label: {
-    marginBottom: 8,
-    color: '#374151',
-  },
-  sectionLabel: {
-    marginBottom: 8,
-    marginTop: 16,
-    color: '#374151',
-  },
-  input: {
-    marginBottom: 8,
-  },
-  roundedInput: {
+    elevation: 2,
     borderRadius: 12,
   },
-  answerContainer: {
+  questionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: 8,
+  },
+  inputWrapper: {
+    flex: 1,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  inputOutline: {
+    borderRadius: 12,
+  },
+  inputContent: {
+    paddingHorizontal: 12,
+  },
+  label: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  mathPreviewClickable: {
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    minHeight: 56,
+  },
+  doubleTapHint: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 6,
+    textAlign: 'right',
+  },
+  answersContainer: {
+    marginTop: 8,
   },
   answerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'flex-start',
+    marginBottom: 8,
   },
-  answerInput: {
+  answerInputContainer: {
     flex: 1,
   },
-  correctButton: {
-    margin: 0,
+  answerInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  difficultyContainer: {
-    marginTop: 8,
-  },
-  difficultyButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between', // Chia đều khoảng cách
-    gap: 4, // Giảm gap từ 8 xuống 4
-    marginBottom: 12,
-  },
-  difficultyButton: {
-    flex: 1, // Mỗi button chiếm 1/5 width
-    minHeight: 36, // Chiều cao tối thiểu
-    borderRadius: 8,
-    marginHorizontal: 2, // Thêm margin nhỏ
-  },
-  buttonContent: {
-    height: 36, // Chiều cao cố định
-    minWidth: 0, // Bỏ minWidth mặc định
-  },
-  buttonLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginHorizontal: 0,
-    marginVertical: 0,
-  },
-  difficultyChip: {
-    alignSelf: 'flex-start',
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 12,
   },
 });
 
