@@ -23,6 +23,7 @@ import ExamCategoryForm from '@@/components/forms/ExamCategoryForm';
 import QuestionsSection from '@@/components/forms/QuestionsSection';
 import SelectionModal from '@@/components/modals/SelectionModal';
 import ActionButtons from '@@/components/ui/ActionButtons';
+import { postExam } from '@@/services/exam/exam';
 
 interface SelectItem {
   _id: string;
@@ -42,7 +43,7 @@ function CreateExamScreen() {
     gradeLevelId: { _id: '', name: '' },
     examTypeId: { _id: '', name: '' },
     questions: [],
-    status: 'draft',
+    status: 'DRAFT',
   });
 
   const [selectedItems, setSelectedItems] = useState({
@@ -82,12 +83,12 @@ function CreateExamScreen() {
   const createNewQuestion = () => {
     return {
       id: generateId(),
-      content: '',
+      question_text: '', // Đổi từ content -> question_text
       answers: [
-        { id: generateId(), text: '', isCorrect: false },
-        { id: generateId(), text: '', isCorrect: false },
-        { id: generateId(), text: '', isCorrect: false },
-        { id: generateId(), text: '', isCorrect: false },
+        { id: generateId(), answer_text: '', is_correct: false }, // Đổi text -> answer_text, isCorrect -> is_correct
+        { id: generateId(), answer_text: '', is_correct: false },
+        { id: generateId(), answer_text: '', is_correct: false },
+        { id: generateId(), answer_text: '', is_correct: false },
       ],
       explanation: '',
       difficulty: 2,
@@ -111,6 +112,23 @@ function CreateExamScreen() {
     setErrors(newErrors);
   };
 
+  const handleInputChange = (field: string, value: string) => {
+    if (field === 'duration') {
+      setFormData((prev) => ({ ...prev, [field]: Number(value) }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
+
+    // XÓA error thay vì set empty string
+    if (errors[field]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
   const handleQuestionChange = (
     questionId: string,
     field: string,
@@ -120,10 +138,14 @@ function CreateExamScreen() {
       prev.map((q) => (q.id === questionId ? { ...q, [field]: value } : q)),
     );
 
-    // Clear error if exists
-    const errorKey = `question_${questionId}_${field}`;
+    // XÓA error
+    const errorKey = `question_${questionId}`;
     if (errors[errorKey]) {
-      setErrors((prev) => ({ ...prev, [errorKey]: '' }));
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
     }
   };
 
@@ -138,17 +160,21 @@ function CreateExamScreen() {
           ? {
               ...q,
               answers: q.answers.map((a: any) =>
-                a.id === answerId ? { ...a, text } : a,
+                a.id === answerId ? { ...a, answer_text: text } : a,
               ),
             }
           : q,
       ),
     );
 
-    // Clear error if exists
-    const errorKey = `question_${questionId}_answer_${answerId}`;
+    // XÓA error
+    const errorKey = `answer_${answerId}`;
     if (errors[errorKey]) {
-      setErrors((prev) => ({ ...prev, [errorKey]: '' }));
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
     }
   };
 
@@ -160,17 +186,21 @@ function CreateExamScreen() {
               ...q,
               answers: q.answers.map((a: any) => ({
                 ...a,
-                isCorrect: a.id === answerId,
+                is_correct: a.id === answerId,
               })),
             }
           : q,
       ),
     );
 
-    // Clear correct answer error
+    // XÓA error
     const errorKey = `question_${questionId}_correct_answer`;
     if (errors[errorKey]) {
-      setErrors((prev) => ({ ...prev, [errorKey]: '' }));
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
     }
   };
 
@@ -210,18 +240,6 @@ function CreateExamScreen() {
         position: 'bottom',
       });
       console.error('ERROR fetchAllData:', error);
-    }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    if (field === 'duration') {
-      setFormData((prev) => ({ ...prev, [field]: Number(value) }));
-    } else {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-    }
-
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -271,8 +289,13 @@ function CreateExamScreen() {
 
     setSelectedItems((prev) => ({ ...prev, [modalType]: item }));
 
+    // XÓA error
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
 
     setModalVisible(false);
@@ -324,73 +347,108 @@ function CreateExamScreen() {
 
     questions.forEach((question) => {
       // Validate question content
-      if (!question.content?.trim()) {
-        newErrors[`question_${question.id}_content`] =
-          'Nội dung câu hỏi là bắt buộc';
+      if (!question.question_text?.trim()) {
+        newErrors[`question_${question.id}`] = 'Nội dung câu hỏi là bắt buộc';
       }
 
       // Validate answers
-      let hasCorrectAnswer = false;
-      let emptyAnswerCount = 0;
-
       question.answers?.forEach((answer: any) => {
-        if (!answer.text?.trim()) {
-          emptyAnswerCount++;
-          newErrors[`question_${question.id}_answer_${answer.id}`] =
-            'Đáp án không được để trống';
-        }
-        if (answer.isCorrect) {
-          hasCorrectAnswer = true;
+        if (!answer.answer_text?.trim()) {
+          newErrors[`answer_${answer.id}`] = 'Đáp án không được để trống';
         }
       });
-
-      // Must have at least one correct answer
-      if (!hasCorrectAnswer) {
-        newErrors[`question_${question.id}_correct_answer`] =
-          'Phải chọn ít nhất 1 đáp án đúng';
-      }
     });
 
     setErrors(newErrors);
+
+    console.log(
+      '🔍 Validation - New errors with values:',
+      Object.entries(newErrors).filter(([_, v]) => v !== ''),
+    );
+
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    const isValid = validateForm();
+
+    console.log('✅ Validation result:', isValid);
+
+    if (!isValid) {
+      console.log('🛑 VALIDATION FAILED - Showing toast');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Vui lòng kiểm tra lại thông tin!',
+        position: 'top', // Đổi từ 'bottom' -> 'top'
+        topOffset: 60, // Offset từ top (dưới header)
+      });
+      console.log('🛑 Toast shown, returning early');
+      return;
+    }
+
+    console.log('🚀 Validation passed, preparing data...');
 
     setLoading(true);
     try {
-      // Chuẩn bị dữ liệu theo Exam.Record interface
-      const examData: Partial<Exam.Record> = {
-        ...formData,
+      // Chuẩn bị dữ liệu theo format backend yêu cầu
+      const examData = {
+        title: formData.title,
+        description: formData.description,
+        subjectId: formData.subjectId?._id,
+        gradeLevelId: formData.gradeLevelId?._id,
+        examTypeId: formData.examTypeId?._id,
+        duration: formData.duration,
         questions: questions.map((q) => ({
-          content: q.content,
-          answers: q.answers,
-          explanation: q.explanation,
-          difficulty: q.difficulty,
+          content: q.question_text,
+          options: q.answers.map((a: any) => a.answer_text),
+          correctAnswers: q.answers
+            .map((a: any, index: number) => (a.is_correct ? index : -1))
+            .filter((i: number) => i !== -1),
         })),
       };
 
-      console.log('Creating exam with data:', examData);
+      console.log('📤 Sending exam data:', JSON.stringify(examData, null, 2));
+
+      // Gọi API tạo đề thi
+      const response = await postExam(examData);
+
+      console.log('📥 API response:', response);
 
       Toast.show({
         type: 'success',
         text1: 'Thành công',
         text2: 'Tạo đề thi thành công!',
-        position: 'bottom',
+        position: 'top', // Đổi từ 'bottom' -> 'top'
+        topOffset: 60,
+        visibilityTime: 3000,
       });
 
-      router.back();
-    } catch (error) {
-      console.error('Error creating exam:', error);
+      // Delay trước khi quay lại để user thấy toast
+      setTimeout(() => {
+        router.back();
+      }, 1500);
+    } catch (error: any) {
+      console.error('❌ Error creating exam:', error);
+      console.error('❌ Error response:', error?.response?.data);
+
+      const errorMessage =
+        error?.response?.data?.errorDescription ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Có lỗi xảy ra khi tạo đề thi!';
+
       Toast.show({
         type: 'error',
         text1: 'Lỗi',
-        text2: 'Có lỗi xảy ra khi tạo đề thi!',
-        position: 'bottom',
+        text2: errorMessage,
+        position: 'top', // Đổi từ 'bottom' -> 'top'
+        topOffset: 60,
+        visibilityTime: 4000,
       });
     } finally {
       setLoading(false);
+      console.log('🔵 ========== SUBMIT END ==========');
     }
   };
 
@@ -485,7 +543,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 44, // Padding để content không bị che bởi action buttons
+    paddingBottom: 100, // Tăng padding để tránh bị che
   },
   actionContainer: {
     position: 'absolute', // Cố định tuyệt đối
@@ -497,7 +555,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingBottom: 50, // Thêm padding bottom cho safe area
+    paddingBottom: 34,
     elevation: 8, // Shadow cho Android
     shadowColor: '#000', // Shadow cho iOS
     shadowOffset: {
@@ -506,6 +564,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    zIndex: 100, // Thêm zIndex nhưng thấp hơn Toast (Toast mặc định là 9999)
   },
 });
 

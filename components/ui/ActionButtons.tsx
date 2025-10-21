@@ -6,36 +6,43 @@ interface ActionButtonsProps {
   loading: boolean;
   onCancel: () => void;
   onSubmit: () => void;
-  cancelText?: string;
   submitText?: string;
-  submitIcon?: string;
+  cancelText?: string;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({
   loading,
   onCancel,
   onSubmit,
-  cancelText = 'Hủy',
   submitText = 'Tạo đề thi',
-  submitIcon = 'plus',
+  cancelText = 'Hủy',
 }) => {
+  const handleSubmit = () => {
+    onSubmit();
+  };
+
+  const handleCancel = () => {
+    onCancel();
+  };
+
   return (
-    <View style={styles.actionButtons}>
+    <View style={styles.container} pointerEvents="box-none">
       <Button
         mode="outlined"
-        onPress={onCancel}
-        style={styles.cancelButton}
+        onPress={handleCancel}
         disabled={loading}
+        style={styles.cancelButton}
+        textColor="#6B7280"
       >
         {cancelText}
       </Button>
       <Button
         mode="contained"
-        onPress={onSubmit}
-        style={styles.submitButton}
+        onPress={handleSubmit}
         loading={loading}
         disabled={loading}
-        icon={submitIcon}
+        style={styles.submitButton}
+        buttonColor="#8B5CF6"
       >
         {submitText}
       </Button>
@@ -44,15 +51,17 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 };
 
 const styles = StyleSheet.create({
-  actionButtons: {
+  container: {
     flexDirection: 'row',
     gap: 12,
+    zIndex: 1000, // Thêm zIndex
   },
   cancelButton: {
     flex: 1,
+    borderColor: '#E5E7EB',
   },
   submitButton: {
-    flex: 2,
+    flex: 1,
   },
 });
 

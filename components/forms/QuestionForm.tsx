@@ -1,5 +1,10 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import {
+  TextInput as RNTextInput,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {
   Card,
   IconButton,
@@ -30,111 +35,85 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
   onDeleteQuestion,
   canDelete,
 }) => {
+  // State để track field đang edit
   const [editingField, setEditingField] = useState<string | null>(null);
-  const tapCountRef = useRef<{
-    [key: string]: { count: number; timeout: number | null };
-  }>({});
-  const blurTimeoutRef = useRef<number | null>(null);
+  const inputRefs = useRef<{ [key: string]: RNTextInput | null }>({});
 
-  // Xử lý double tap
-  const handleTap = useCallback((fieldId: string) => {
-    if (!tapCountRef.current[fieldId]) {
-      tapCountRef.current[fieldId] = { count: 0, timeout: null };
-    }
+  // Ref để track trạng thái focus thực tế (không trigger re-render)
+  const isFocusedRef = useRef<{ [key: string]: boolean }>({});
 
-    const tapData = tapCountRef.current[fieldId];
+  // Click vào preview LaTeX -> chuyển sang edit mode và focus
+  const handleQuestionPress = useCallback(() => {
+    const fieldId = `question-${question.id}`;
+    setEditingField(fieldId);
+    isFocusedRef.current[fieldId] = true;
+    // Focus vào input sau khi render
+    setTimeout(() => {
+      inputRefs.current[fieldId]?.focus();
+    }, 100);
+  }, [question.id]);
 
-    if (tapData.timeout) {
-      clearTimeout(tapData.timeout);
-    }
-
-    tapData.count += 1;
-
-    if (tapData.count === 2) {
-      // Double tap - vào edit mode
-      setEditingField(fieldId);
-      tapData.count = 0;
-      tapData.timeout = null;
-    } else {
-      // Single tap - chờ tap thứ 2
-      tapData.timeout = window.setTimeout(() => {
-        tapData.count = 0;
-        tapData.timeout = null;
-      }, 300);
-    }
+  const handleAnswerPress = useCallback((answerId: string) => {
+    const fieldId = `answer-${answerId}`;
+    setEditingField(fieldId);
+    isFocusedRef.current[fieldId] = true;
+    // Focus vào input sau khi render
+    setTimeout(() => {
+      inputRefs.current[fieldId]?.focus();
+    }, 100);
   }, []);
 
-  const handleQuestionTap = useCallback(() => {
-    handleTap(`question-${question.id}`);
-  }, [question.id, handleTap]);
-
-  const handleAnswerTap = useCallback(
-    (answerId: string) => {
-      handleTap(`answer-${answerId}`);
-    },
-    [handleTap],
-  );
-
-  // Focus - set editing field và cancel blur timeout
+  // Khi focus -> đánh dấu đang focus
   const handleQuestionFocus = useCallback(() => {
-    // Cancel blur timeout nếu có
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
-    setEditingField(`question-${question.id}`);
+    const fieldId = `question-${question.id}`;
+    isFocusedRef.current[fieldId] = true;
+    setEditingField(fieldId);
   }, [question.id]);
 
   const handleAnswerFocus = useCallback((answerId: string) => {
-    // Cancel blur timeout nếu có
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
-    setEditingField(`answer-${answerId}`);
+    const fieldId = `answer-${answerId}`;
+    isFocusedRef.current[fieldId] = true;
+    setEditingField(fieldId);
   }, []);
 
-  // Blur - CHỈ clear sau một khoảng delay (để đợi xem có focus lại không)
+  // Khi blur -> CHỈ thoát edit mode nếu THỰC SỰ đã blur (không còn focus)
   const handleQuestionBlur = useCallback(() => {
-    // Chỉ blur nếu có nội dung
-    if (question.question_text) {
-      // Delay 100ms trước khi blur thật sự
-      blurTimeoutRef.current = window.setTimeout(() => {
-        setEditingField((current) => {
-          // Chỉ clear nếu đang edit câu hỏi này
-          if (current === `question-${question.id}`) {
-            return null;
-          }
-          return current;
-        });
-        blurTimeoutRef.current = null;
-      }, 100);
+    const fieldId = `question-${question.id}`;
+    isFocusedRef.current[fieldId] = false;
+
+    // Chỉ clear editing nếu có nội dung và không còn focus
+    if (question.question_text?.trim() && !isFocusedRef.current[fieldId]) {
+      setEditingField((current) => {
+        // Double check: chỉ clear nếu đang edit field này
+        return current === fieldId ? null : current;
+      });
     }
   }, [question.id, question.question_text]);
 
+  // Logic GIỐNG Y HỆT handleQuestionBlur - lưu answerId và text vào closure
   const handleAnswerBlur = useCallback(
     (answerId: string) => {
-      // Tìm answer để kiểm tra có text không
-      const answer = question.answers?.find((a: any) => a.id === answerId);
+      return () => {
+        const fieldId = `answer-${answerId}`;
+        isFocusedRef.current[fieldId] = false;
 
-      // Chỉ blur nếu có nội dung
-      if (answer && answer.answer_text) {
-        // Delay 100ms trước khi blur thật sự
-        blurTimeoutRef.current = window.setTimeout(() => {
+        // Tìm answer text tại thời điểm tạo callback
+        const answer = question.answers?.find((a: any) => a.id === answerId);
+        const answerText = answer?.answer_text;
+
+        // Chỉ clear editing nếu có nội dung và không còn focus
+        if (answerText?.trim() && !isFocusedRef.current[fieldId]) {
           setEditingField((current) => {
-            // Chỉ clear nếu đang edit câu trả lời này
-            if (current === `answer-${answerId}`) {
-              return null;
-            }
-            return current;
+            // Double check: chỉ clear nếu đang edit field này
+            return current === fieldId ? null : current;
           });
-          blurTimeoutRef.current = null;
-        }, 100);
-      }
+        }
+      };
     },
     [question.answers],
   );
 
+  // Kiểm tra field có đang edit không
   const isQuestionEditing = editingField === `question-${question.id}`;
   const isAnswerEditing = (answerId: string) =>
     editingField === `answer-${answerId}`;
@@ -151,6 +130,9 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
           <View style={styles.inputWrapper}>
             {shouldShowQuestionInput ? (
               <TextInput
+                ref={(ref: RNTextInput | null) => {
+                  inputRefs.current[`question-${question.id}`] = ref;
+                }}
                 label={`Câu hỏi ${questionIndex + 1}`}
                 value={question.question_text}
                 onChangeText={(text) =>
@@ -162,7 +144,6 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
                 mode="outlined"
                 multiline
                 error={!!errors[`question_${question.id}`]}
-                autoFocus={isQuestionEditing}
                 outlineColor="#E5E7EB"
                 activeOutlineColor="#8B5CF6"
                 outlineStyle={styles.inputOutline}
@@ -175,7 +156,10 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
                 }}
               />
             ) : (
-              <TouchableWithoutFeedback onPress={handleQuestionTap}>
+              <TouchableOpacity
+                onPress={handleQuestionPress}
+                activeOpacity={0.7}
+              >
                 <View style={styles.mathPreviewClickable}>
                   <Text style={styles.label}>Câu hỏi {questionIndex + 1}</Text>
                   <MathRenderer
@@ -183,11 +167,9 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
                     fontSize={14}
                     color="#1F2937"
                   />
-                  <Text style={styles.doubleTapHint}>
-                    Nhấn đúp để chỉnh sửa
-                  </Text>
+                  <Text style={styles.editHint}>Nhấn để chỉnh sửa</Text>
                 </View>
-              </TouchableWithoutFeedback>
+              </TouchableOpacity>
             )}
           </View>
           {canDelete && (
@@ -218,18 +200,20 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
               <View style={styles.answerInputContainer}>
                 {shouldShowAnswerInput(answer) ? (
                   <TextInput
+                    ref={(ref: RNTextInput | null) => {
+                      inputRefs.current[`answer-${answer.id}`] = ref;
+                    }}
                     label={`Câu trả lời ${answerIndex + 1}`}
                     value={answer.answer_text}
                     onChangeText={(text) =>
                       onAnswerChange(question.id, answer.id, text)
                     }
                     onFocus={() => handleAnswerFocus(answer.id)}
-                    onBlur={() => handleAnswerBlur(answer.id)}
+                    onBlur={handleAnswerBlur(answer.id)}
                     style={styles.answerInput}
                     mode="outlined"
                     multiline
                     error={!!errors[`answer_${answer.id}`]}
-                    autoFocus={isAnswerEditing(answer.id)}
                     outlineColor="#E5E7EB"
                     activeOutlineColor="#8B5CF6"
                     outlineStyle={styles.inputOutline}
@@ -242,8 +226,9 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
                     }}
                   />
                 ) : (
-                  <TouchableWithoutFeedback
-                    onPress={() => handleAnswerTap(answer.id)}
+                  <TouchableOpacity
+                    onPress={() => handleAnswerPress(answer.id)}
+                    activeOpacity={0.7}
                   >
                     <View style={styles.mathPreviewClickable}>
                       <Text style={styles.label}>
@@ -254,11 +239,9 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
                         fontSize={13}
                         color="#374151"
                       />
-                      <Text style={styles.doubleTapHint}>
-                        Nhấn đúp để chỉnh sửa
-                      </Text>
+                      <Text style={styles.editHint}>Nhấn để chỉnh sửa</Text>
                     </View>
-                  </TouchableWithoutFeedback>
+                  </TouchableOpacity>
                 )}
 
                 {errors[`answer_${answer.id}`] && (
@@ -314,7 +297,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     minHeight: 56,
   },
-  doubleTapHint: {
+  editHint: {
     fontSize: 10,
     color: '#9CA3AF',
     fontStyle: 'italic',

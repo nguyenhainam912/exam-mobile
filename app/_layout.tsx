@@ -9,6 +9,7 @@ import { Dimensions, Platform, StyleSheet, View } from 'react-native';
 import { MD3LightTheme, Provider as PaperProvider } from 'react-native-paper';
 import 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 
 // Lấy kích thước màn hình
 const { width: screenWidth } = Dimensions.get('window');
@@ -192,6 +193,29 @@ export default function RootLayout() {
           <StatusBar style="auto" />
         </PaperProvider>
       </ThemeProvider>
+      {/* Toast - đặt ở đây sẽ render trên tất cả màn hình */}
+      <Toast
+        config={{
+          success: (props) => (
+            <BaseToast
+              {...props}
+              style={{ borderLeftColor: '#10B981', zIndex: 99999 }}
+              contentContainerStyle={{ paddingHorizontal: 15 }}
+              text1Style={{ fontSize: 15, fontWeight: '600' }}
+              text2Style={{ fontSize: 13 }}
+            />
+          ),
+          error: (props) => (
+            <ErrorToast
+              {...props}
+              style={{ borderLeftColor: '#EF4444', zIndex: 99999 }}
+              contentContainerStyle={{ paddingHorizontal: 15 }}
+              text1Style={{ fontSize: 15, fontWeight: '600' }}
+              text2Style={{ fontSize: 13 }}
+            />
+          ),
+        }}
+      />
     </QueryClientProvider>
   );
 }
