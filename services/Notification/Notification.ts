@@ -20,23 +20,22 @@ export async function getNotification(payload: {
   }
 }
 
-export async function putNotification(id: string, payload: any) {
+export async function markSingleNotificationAsRead(notificationId: string) {
   try {
-    const response = await axiosInstance.put(
-      `/notification/user-notification/${id}`,
-      payload,
-    );
+    const response = await axiosInstance.post(`/notify/mark-as-read`, {
+      notificationIds: [notificationId],
+    });
     return response?.data;
   } catch (error) {
     throw error;
   }
 }
-export async function putNotifications(payload: any) {
+
+export async function markNotificationsAsRead(notificationIds: string[]) {
   try {
-    const response = await axiosInstance.put(
-      `/notification/user-notifications`,
-      payload,
-    );
+    const response = await axiosInstance.post(`/notify/mark-as-read`, {
+      notificationIds,
+    });
     return response?.data;
   } catch (error) {
     throw error;

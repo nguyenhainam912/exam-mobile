@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { CustomHeader } from '../../components/Header/CustomHeader';
 import { HomeContent } from '../../components/Home/HomeContent';
+import { getNotification } from '../../services/Notification/Notification';
+import { socket } from '../../services/socket';
 import { useAppStore } from '../../stores/appStore';
 
 export default function HomeScreen() {
@@ -12,35 +14,51 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Hàm lấy số lượng thông báo chưa đọc
-  const fetchUnreadCount = async () => {
-    try {
-      // Đây là một ví dụ, thay thế bằng API thực tế của bạn
-      // const count = await getUnreadNotificationCount(currentUser._id);
-      // setUnreadCount(count);
+  const fetchUnreadCount = useCallback(async () => {
+    if (!currentUser?.userId) return;
 
-      // Tạm thời sử dụng số lượng cố định cho ví dụ
-      setUnreadCount(3);
+    try {
+      const response = await getNotification({
+        page: 1,
+        limit: 1,
+        cond: {
+          user: currentUser.userId,
+          isRead: false,
+        },
+      });
+
+      const total = response?.data?.total || 0;
+      setUnreadCount(total);
     } catch (error) {
       console.error('Error fetching notification count:', error);
     }
-  };
+  }, [currentUser?.userId]);
 
   // Sử dụng useFocusEffect để cập nhật khi màn hình được focus
   useFocusEffect(
     useCallback(() => {
-      if (currentUser?._id) {
-        fetchUnreadCount();
-      }
+      fetchUnreadCount();
       return () => {};
-    }, [currentUser]),
+    }, [fetchUnreadCount]),
   );
 
-  // Vẫn giữ useEffect để khởi tạo lần đầu
+  // Lắng nghe socket để cập nhật realtime
   useEffect(() => {
-    if (currentUser?._id) {
+    if (!currentUser?.userId) return;
+
+    socket.emit('join-notification-room', currentUser.userId);
+
+    const handleNewNotification = () => {
       fetchUnreadCount();
-    }
-  }, [currentUser]);
+    };
+
+    socket.on('new-notification', handleNewNotification);
+
+    return () => {
+      socket.off('new-notification', handleNewNotification);
+      socket.emit('leave-notification-room', currentUser.userId);
+    };
+  }, [currentUser?.userId, fetchUnreadCount]);
 
   // Xử lý khi người dùng nhấn vào icon thông báo
   const handleNotificationPress = () => {

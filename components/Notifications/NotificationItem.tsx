@@ -1,19 +1,15 @@
-import { StyleSheet, View } from 'react-native';
-import { Badge, Card, IconButton, Text } from 'react-native-paper';
-
-interface Notification {
-  _id: string;
-  title: string;
-  content: string;
-  isRead: boolean;
-  createdAt: string;
-  user: string;
-  type?: string;
-  link?: string;
-}
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Text } from 'react-native-paper';
 
 interface NotificationItemProps {
-  notification: Notification;
+  notification: {
+    _id: string;
+    subject: string;
+    content: string;
+    isRead: boolean;
+    createdAt: string;
+  };
   onPress: () => void;
 }
 
@@ -21,160 +17,81 @@ export default function NotificationItem({
   notification,
   onPress,
 }: NotificationItemProps) {
-  // Xác định icon dựa trên loại thông báo
-  const getNotificationIcon = (type?: string) => {
-    switch (type?.toLowerCase()) {
-      case 'announcement':
-        return 'bullhorn';
-      case 'assignment':
-        return 'book-open-page-variant';
-      case 'event':
-        return 'calendar';
-      case 'alert':
-        return 'alert-circle';
-      case 'info':
-        return 'information';
-      default:
-        return 'bell';
-    }
-  };
-
-  // Format thời gian
-  const formatTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffTime = now.getTime() - date.getTime();
-      const diffMinutes = Math.floor(diffTime / (1000 * 60));
-      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-      // Cùng ngày
-      if (date.toDateString() === now.toDateString()) {
-        if (diffMinutes < 60) {
-          return `${diffMinutes} phút trước`;
-        } else {
-          return `${diffHours} giờ trước`;
-        }
-      }
-
-      // Trong vòng 7 ngày
-      if (diffDays < 7) {
-        return `${diffDays} ngày trước`;
-      }
-
-      // Cùng năm
-      if (date.getFullYear() === now.getFullYear()) {
-        const day = date.getDate();
-        const month = date.getMonth() + 1;
-        return `Ngày ${day} tháng ${month}`;
-      }
-
-      // Khác năm
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    } catch (e) {
-      return dateString;
-    }
+  const formatDate = (date: string) => {
+    const d = new Date(date);
+    return `Ngày ${d.getDate()} tháng ${d.getMonth() + 1}`;
   };
 
   return (
-    <Card
-      style={[
-        styles.card,
-        notification.isRead ? styles.readCard : styles.unreadCard,
-      ]}
+    <TouchableOpacity
+      style={[styles.container, !notification.isRead && styles.unreadContainer]}
       onPress={onPress}
+      activeOpacity={0.7}
     >
-      <Card.Content style={styles.cardContent}>
-        <View style={styles.iconContainer}>
-          <IconButton
-            icon={getNotificationIcon(notification.type)}
-            size={24}
-            iconColor="#8B5CF6"
-            style={styles.icon}
-          />
-          {!notification.isRead && <Badge size={8} style={styles.badge} />}
-        </View>
+      {/* Icon */}
+      <MaterialCommunityIcons
+        name="bell"
+        size={24}
+        color={!notification.isRead ? '#8B5CF6' : '#D1D5DB'}
+        style={styles.icon}
+      />
 
-        <View style={styles.contentContainer}>
-          <Text
-            variant="titleMedium"
-            style={[
-              styles.title,
-              notification.isRead ? styles.readText : styles.unreadText,
-            ]}
-            numberOfLines={1}
-          >
-            {notification.title}
-          </Text>
+      {/* Text content */}
+      <View style={styles.textContent}>
+        <Text style={styles.subject}>{notification.subject}</Text>
+        <Text style={styles.content}>{notification.content}</Text>
+        <Text style={styles.date}>{formatDate(notification.createdAt)}</Text>
+      </View>
 
-          <Text variant="bodyMedium" style={styles.content} numberOfLines={2}>
-            {notification.content}
-          </Text>
-
-          <Text variant="bodySmall" style={styles.time}>
-            {formatTime(notification.createdAt)}
-          </Text>
-        </View>
-      </Card.Content>
-    </Card>
+      {/* Indicator đã đọc */}
+      {!notification.isRead && <View style={styles.unreadDot} />}
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginBottom: 12,
-    borderRadius: 12,
-    elevation: 2,
-  },
-  unreadCard: {
-    backgroundColor: '#F5EEFF',
-  },
-  readCard: {
-    backgroundColor: '#FFFFFF',
-  },
-  cardContent: {
+  container: {
     flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
     padding: 12,
+    marginBottom: 12,
+    alignItems: 'flex-start',
   },
-  iconContainer: {
-    position: 'relative',
-    marginRight: 8,
+  unreadContainer: {
+    backgroundColor: '#F3E8FF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
   },
   icon: {
-    backgroundColor: '#F3E8FF',
-    margin: 0,
+    marginRight: 12,
+    marginTop: 2,
   },
-  badge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#EF4444',
-  },
-  contentContainer: {
+  textContent: {
     flex: 1,
-    marginLeft: 4,
   },
-  title: {
+  subject: {
+    fontSize: 15,
     fontWeight: '600',
+    color: '#1F2937',
     marginBottom: 4,
   },
-  unreadText: {
-    color: '#1F2937',
-    fontWeight: '700',
-  },
-  readText: {
-    color: '#4B5563',
-  },
   content: {
+    fontSize: 13,
     color: '#6B7280',
-    marginBottom: 8,
+    marginBottom: 6,
+    lineHeight: 18,
   },
-  time: {
-    color: '#9CA3AF',
+  date: {
     fontSize: 12,
+    color: '#9CA3AF',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#8B5CF6',
+    marginLeft: 8,
+    marginTop: 6,
   },
 });
