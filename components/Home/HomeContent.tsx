@@ -3,6 +3,7 @@ import { useAppStore } from '@@/stores/appStore';
 import { useRouter } from 'expo-router'; // Thêm import này
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import ChatBubble from '../Chat/ChatBubble';
 import { FeatureGrid } from './FeatureGrid';
 import { UserCard } from './UserCard';
 
@@ -202,12 +203,12 @@ export function HomeContent() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Chức năng quản lý */}
-        <FeatureGrid
+        {/* <FeatureGrid
           features={managementFeatures}
           loading={false}
           title="Chức năng"
           onFeaturePress={handleManagementFeature}
-        />
+        /> */}
 
         {/* Môn học */}
         <FeatureGrid
@@ -219,6 +220,9 @@ export function HomeContent() {
 
         <View style={styles.spacer} />
       </ScrollView>
+
+      {/* Chat bubble */}
+      <ChatBubble />
     </View>
   );
 }

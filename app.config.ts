@@ -20,6 +20,7 @@ const defineConfig = (): ExpoConfig => ({
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
+    softwareKeyboardLayoutMode: 'resize',
   },
   web: {
     bundler: 'metro',
